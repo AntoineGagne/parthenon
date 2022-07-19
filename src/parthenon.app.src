@@ -1,0 +1,14 @@
+{application, parthenon, [
+    {description, "Parse the Athena structure format."},
+    {vsn, "git"},
+    {registered, []},
+    {applications, [
+        kernel,
+        stdlib
+    ]},
+    {env, []},
+    {modules, []},
+
+    {licenses, []},
+    {links, []}
+]}.
