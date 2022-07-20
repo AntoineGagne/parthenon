@@ -6,9 +6,9 @@
 -type schema() :: #{schema_key() := schema_value()}.
 -type schema_key() :: atom().
 -type schema_value() :: encoder() | schema() | {map_array, schema()}.
--type encoder() :: fun((supported_types()) -> term()).
+-type encoder() :: fun((binary()) -> supported_types()).
 -type supported_types() ::
-    integer() | float() | binary() | boolean() | [supported_types()].
+    undefined | integer() | float() | binary() | boolean() | [supported_types()].
 
 -export_type([
     schema/0,
