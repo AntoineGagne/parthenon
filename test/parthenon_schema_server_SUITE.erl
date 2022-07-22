@@ -15,9 +15,12 @@ all() ->
     [
         can_add_schema,
         return_error_on_invalid_schema,
-        return_not_found_on_non_existing_schema
+        return_not_found_on_non_existing_schema,
+        return_not_started_when_getting_schema_with_unstarted_server
     ].
 
+init_per_testcase(return_not_started_when_getting_schema_with_unstarted_server, Config) ->
+    Config;
 init_per_testcase(_Name, Config) ->
     {ok, _} = parthenon_schema_server:start_link(),
     Config.
