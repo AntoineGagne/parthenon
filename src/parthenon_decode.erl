@@ -11,8 +11,8 @@
 
 try_decode(SchemaName, Binary) ->
     try
-        {Object, Rest} = decode(SchemaName, Binary),
-        {ok, {Object, Rest}}
+        {Object, _Rest} = decode(SchemaName, Binary),
+        {ok, Object}
     catch
         _:E:S ->
             {error, {E, S}}
@@ -37,11 +37,11 @@ do_decode(<<Invalid, _Rest/binary>>, _Schema) ->
 
 object(<<$=, Rest/binary>>, key, Buffer, Object, Schema) ->
     Key = binary_to_existing_atom(Buffer),
-    object(Rest, {value, Key, 0}, <<>>, Object, Schema);
-object(<<$=, Rest/binary>>, {value, Key, 0}, Buffer, _Object, _Schema) ->
-    throw({parse_error, {object_value, Key, Buffer}, Rest});
+    object(Rest, {value, Key, undefined}, <<>>, Object, Schema);
+object(<<$=, Rest/binary>>, {value, Key, undefined}, Buffer, Object, Schema) ->
+    object(Rest, {value, Key, undefined}, <<Buffer/binary, $=>>, Object, Schema);
 object(<<$=, Rest/binary>>, {value, Key, LastComma}, Buffer, Object, Schema) ->
-    Encoder = maps:get(Key, Schema),
+    Encoder = wrap_encoder(maps:get(Key, Schema)),
     Value = binary:part(Buffer, 0, LastComma - 1),
     NewKey = binary_to_existing_atom(
         binary:part(Buffer, LastComma, byte_size(Buffer) - LastComma)
@@ -63,7 +63,7 @@ object(<<${, Rest/binary>>, {value, Key, _}, <<>>, Object, Schema) ->
 object(<<$,, Rest/binary>>, {value, Key, _}, Buffer, Object, Schema) ->
     object(Rest, {value, Key, byte_size(Buffer) + 1}, <<Buffer/binary, $,>>, Object, Schema);
 object(<<$}, Rest/binary>>, {value, Key, _}, Buffer, Object, Schema) ->
-    Encoder = maps:get(Key, Schema),
+    Encoder = wrap_encoder(maps:get(Key, Schema)),
     {Object#{Key => Encoder(Buffer)}, Rest};
 object(<<$}, Rest/binary>>, key, _Buffer, Object, _Schema) ->
     {Object, Rest};
@@ -94,3 +94,11 @@ maybe_consume_character(<<Character, Rest/binary>>, Character) ->
     Rest;
 maybe_consume_character(Binary, _) ->
     Binary.
+
+wrap_encoder(Fun) ->
+    fun
+        (<<"null">>) ->
+            undefined;
+        (Value) ->
+            Fun(Value)
+    end.

@@ -47,11 +47,11 @@ groups() ->
 %%%===================================================================
 
 can_decode_empty_struct(_Config) ->
-    ?assertEqual({ok, {#{}, <<>>}}, parthenon_decode:try_decode(?A_SCHEMA_NAME, <<"{}">>)).
+    ?assertEqual({ok, #{}}, parthenon_decode:try_decode(?A_SCHEMA_NAME, <<"{}">>)).
 
 can_decode_struct_with_primitive_elements(_Config) ->
     ?assertEqual(
-        {ok, {#{a => 123, b => <<"foo bar">>, c => <<"Test, Test">>, d => 456}, <<>>}},
+        {ok, #{a => 123, b => <<"foo bar">>, c => <<"Test, Test">>, d => 456}},
         parthenon_decode:try_decode(
             ?ANOTHER_SCHEMA_NAME, <<"{a=123,b=foo bar,c=Test, Test,d=456}">>
         )
@@ -59,20 +59,17 @@ can_decode_struct_with_primitive_elements(_Config) ->
 
 can_decode_struct_with_flat_elements(_Config) ->
     ?assertEqual(
-        {ok, {#{a => 123, b => <<"foo bar">>, e => [456, 789]}, <<>>}},
+        {ok, #{a => 123, b => <<"foo bar">>, e => [456, 789]}},
         parthenon_decode:try_decode(?A_SCHEMA_NAME, <<"{a=123,b=foo bar,e=[456,789]}">>)
     ).
 
 can_decode_struct_with_nested_elements(_Config) ->
     ?assertEqual(
-        {ok, {
-            #{
-                a => 123,
-                b => <<"foo bar">>,
-                c => #{d => 1011, f => [<<"foo bar">>, <<"baz bar">>]},
-                e => [456, 789]
-            },
-            <<>>
+        {ok, #{
+            a => 123,
+            b => <<"foo bar">>,
+            c => #{d => 1011, f => [<<"foo bar">>, <<"baz bar">>]},
+            e => [456, 789]
         }},
         parthenon_decode:try_decode(
             ?A_SCHEMA_NAME,
