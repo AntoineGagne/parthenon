@@ -1,0 +1,42 @@
+=========
+parthenon
+=========
+
+.. image:: https://github.com/AntoineGagne/parthenon/actions/workflows/erlang.yml/badge.svg
+    :target: https://github.com/AntoineGagne/parthenon/actions
+
+:Author: `Antoine Gagné <gagnantoine@gmail.com>`_
+
+.. contents::
+    :backlinks: none
+
+.. sectnum::
+
+A library that parses AWS Athena structures into Erlang terms.
+
+Usage
+=====
+
+.. code-block:: erlang
+
+    {ok, Binary} = file:read_file("/path/to/athena-structure-schema").
+    parthenon:add_schema(athena_structure, Binary).
+    {ok, RawStructure} = file:read_file("/path/to/raw-athena-structure").
+    parthenon:decode(athena_structure, RawStructure).
+
+.. code-block:: erlang
+
+    parthenon:add_schema(athena_structure, <<"struct<a: int, b: int>">>).
+    parthenon:decode(athena_structure, <<"{a=123, b=456}">>).
+
+Development
+===========
+
+Running all the tests and linters
+---------------------------------
+
+You can run all the tests and linters with the ``rebar3`` alias:
+
+.. code-block:: sh
+
+    rebar3 check

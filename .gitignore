@@ -115,3 +115,8 @@ tags
 
 # Ignore code-workspaces
 *.code-workspace
+
+## Custom Rules
+
+src/parthenon_schema_lexer.erl
+src/parthenon_schema_parser.erl

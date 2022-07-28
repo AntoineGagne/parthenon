@@ -2,6 +2,7 @@
     {description, "Parse the Athena structure format."},
     {vsn, "git"},
     {registered, []},
+    {mod, {parthenon_app, []}},
     {applications, [
         kernel,
         stdlib
