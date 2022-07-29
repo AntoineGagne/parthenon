@@ -105,12 +105,21 @@ wrap_encoder(Fun) ->
 
 to_key(Raw) ->
     Trimmed = string:trim(Raw, both),
-    Binary = unicode:characters_to_binary(Trimmed),
+    case unicode:characters_to_binary(Trimmed) of
+        {error, _, _} ->
+            Raw;
+        {incomplete, _, _} ->
+            Raw;
+        Binary ->
+            try_binary_to_existing_atom(Binary)
+    end.
+
+try_binary_to_existing_atom(Binary) ->
     try
         binary_to_existing_atom(Binary)
     catch
         _:_:_ ->
-            Trimmed
+            Binary
     end.
 
 identity(X) ->
