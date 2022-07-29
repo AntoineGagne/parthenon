@@ -105,8 +105,9 @@ wrap_encoder(Fun) ->
 
 to_key(Raw) ->
     Trimmed = string:trim(Raw, both),
+    Binary = unicode:characters_to_binary(Trimmed),
     try
-        binary_to_existing_atom(Trimmed)
+        binary_to_existing_atom(Binary)
     catch
         _:_:_ ->
             Trimmed
