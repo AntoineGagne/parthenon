@@ -36,26 +36,26 @@ do_decode(<<Invalid, _Rest/binary>>, _Schema) ->
     throw({invalid_character, Invalid, 1}).
 
 object(<<$=, Rest/binary>>, key, Buffer, Object, Schema) ->
-    Key = binary_to_existing_atom(Buffer),
+    Key = to_key(Buffer),
     object(Rest, {value, Key, undefined}, <<>>, Object, Schema);
 object(<<$=, Rest/binary>>, {value, Key, undefined}, Buffer, Object, Schema) ->
     object(Rest, {value, Key, undefined}, <<Buffer/binary, $=>>, Object, Schema);
 object(<<$=, Rest/binary>>, {value, Key, LastComma}, Buffer, Object, Schema) ->
-    Encoder = wrap_encoder(maps:get(Key, Schema)),
+    Encoder = wrap_encoder(maps:get(Key, Schema, fun identity/1)),
     Value = binary:part(Buffer, 0, LastComma - 1),
-    NewKey = binary_to_existing_atom(
+    NewKey = to_key(
         binary:part(Buffer, LastComma, byte_size(Buffer) - LastComma)
     ),
     NewObject = Object#{Key => Encoder(Value)},
     object(Rest, {value, NewKey, undefined}, <<>>, NewObject, Schema);
 object(<<$[, Rest/binary>>, {value, Key, _}, <<>>, Object, Schema) ->
-    Encoder = maps:get(Key, Schema),
+    Encoder = maps:get(Key, Schema, fun identity/1),
     {List, Rest2} = list(Rest, Encoder),
     NewObject = Object#{Key => List},
     Rest3 = maybe_consume_character(Rest2, $,),
     object(Rest3, key, <<>>, NewObject, Schema);
 object(<<${, Rest/binary>>, {value, Key, _}, <<>>, Object, Schema) ->
-    Encoder = maps:get(Key, Schema),
+    Encoder = maps:get(Key, Schema, #{}),
     {SubObject, Rest2} = object(Rest, key, <<>>, #{}, Encoder),
     NewObject = Object#{Key => SubObject},
     Rest3 = maybe_consume_character(Rest2, $,),
@@ -63,7 +63,7 @@ object(<<${, Rest/binary>>, {value, Key, _}, <<>>, Object, Schema) ->
 object(<<$,, Rest/binary>>, {value, Key, _}, Buffer, Object, Schema) ->
     object(Rest, {value, Key, byte_size(Buffer) + 1}, <<Buffer/binary, $,>>, Object, Schema);
 object(<<$}, Rest/binary>>, {value, Key, _}, Buffer, Object, Schema) ->
-    Encoder = wrap_encoder(maps:get(Key, Schema)),
+    Encoder = wrap_encoder(maps:get(Key, Schema, fun identity/1)),
     {Object#{Key => Encoder(Buffer)}, Rest};
 object(<<$}, Rest/binary>>, key, _Buffer, Object, _Schema) ->
     {Object, Rest};
@@ -102,3 +102,25 @@ wrap_encoder(Fun) ->
         (Value) ->
             Fun(Value)
     end.
+
+to_key(Raw) ->
+    Trimmed = string:trim(Raw, both),
+    case unicode:characters_to_binary(Trimmed) of
+        {error, _, _} ->
+            Raw;
+        {incomplete, _, _} ->
+            Raw;
+        Binary ->
+            try_binary_to_existing_atom(Binary)
+    end.
+
+try_binary_to_existing_atom(Binary) ->
+    try
+        binary_to_existing_atom(Binary)
+    catch
+        _:_:_ ->
+            Binary
+    end.
+
+identity(X) ->
+    X.
