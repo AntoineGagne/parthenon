@@ -6,6 +6,8 @@ parthenon
     :target: https://github.com/AntoineGagne/parthenon/actions
 .. image:: https://coveralls.io/repos/AntoineGagne/parthenon/badge.png?branch=master
     :target: https://coveralls.io/r/AntoineGagne/parthenon?branch=master
+.. image:: http://img.shields.io/hexpm/v/parthenon.svg?style=flat
+    :target: https://hex.pm/packages/parthenon
 
 :Author: `Antoine Gagné <gagnantoine@gmail.com>`_
 
