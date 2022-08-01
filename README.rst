@@ -19,15 +19,13 @@ Usage
 
 .. code-block:: erlang
 
+    parthenon:add_schema(athena_structure, <<"struct<a: int, b: int>">>).
+    parthenon:decode(athena_structure, <<"{a=123, b=456}">>).
+
     {ok, Binary} = file:read_file("/path/to/athena-structure-schema").
     parthenon:add_schema(athena_structure, Binary).
     {ok, RawStructure} = file:read_file("/path/to/raw-athena-structure").
     parthenon:decode(athena_structure, RawStructure).
-
-.. code-block:: erlang
-
-    parthenon:add_schema(athena_structure, <<"struct<a: int, b: int>">>).
-    parthenon:decode(athena_structure, <<"{a=123, b=456}">>).
 
 Development
 ===========

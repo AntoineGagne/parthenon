@@ -1,5 +1,5 @@
 {application, parthenon, [
-    {description, "Parse the Athena structure format."},
+    {description, "Parse Athena structures into Erlang terms."},
     {vsn, "git"},
     {registered, []},
     {mod, {parthenon_app, []}},
@@ -10,6 +10,6 @@
     {env, []},
     {modules, []},
 
-    {licenses, []},
-    {links, []}
+    {licenses, ["BSD3"]},
+    {links, [{"Github", "https://github.com/AntoineGagne/parthenon"}]}
 ]}.
