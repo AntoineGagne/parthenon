@@ -4,6 +4,8 @@ parthenon
 
 .. image:: https://github.com/AntoineGagne/parthenon/actions/workflows/erlang.yml/badge.svg
     :target: https://github.com/AntoineGagne/parthenon/actions
+.. image:: https://coveralls.io/repos/AntoineGagne/parthenon/badge.png?branch=master
+    :target: https://coveralls.io/r/AntoineGagne/parthenon?branch=master
 
 :Author: `Antoine Gagné <gagnantoine@gmail.com>`_
 
