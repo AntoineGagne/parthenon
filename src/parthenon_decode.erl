@@ -13,6 +13,8 @@
 -type decode_options() :: #decode_options{}.
 -type option() :: {object_format, maps | proplists}.
 
+-export_type([option/0]).
+
 %%%===================================================================
 %%% API
 %%%===================================================================
