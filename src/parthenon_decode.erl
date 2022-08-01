@@ -9,6 +9,7 @@
 %%% API
 %%%===================================================================
 
+-spec try_decode(SchemaName :: atom(), Binary :: binary()) -> {ok, term()} | {error, term()}.
 try_decode(SchemaName, Binary) ->
     try
         {Object, _Rest} = decode(SchemaName, Binary),
@@ -116,7 +117,7 @@ to_key(Raw) ->
 
 try_binary_to_existing_atom(Binary) ->
     try
-        binary_to_existing_atom(Binary)
+        binary_to_existing_atom(Binary, utf8)
     catch
         _:_:_ ->
             Binary
