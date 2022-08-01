@@ -12,7 +12,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
-    - uses: actions/cache@v2
+    - name: Cache
+      uses: actions/cache@v2
       env:
         cache-name: rebar3
       with:
@@ -27,3 +28,8 @@ jobs:
       run: rebar3 do clean, compile
     - name: Checks
       run: rebar3 check
+    - name: Coveralls
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: rebar3 as test coveralls send
+
