@@ -2,8 +2,18 @@
 
 %% API
 -export([
-    try_decode/2
+    try_decode/2,
+    try_decode/3
 ]).
+
+-record(decode_options, {
+    object_format = maps :: maps | proplists
+}).
+
+-type decode_options() :: #decode_options{}.
+-type option() :: {object_format, maps | proplists}.
+
+-export_type([option/0]).
 
 %%%===================================================================
 %%% API
@@ -11,8 +21,14 @@
 
 -spec try_decode(SchemaName :: atom(), Binary :: binary()) -> {ok, term()} | {error, term()}.
 try_decode(SchemaName, Binary) ->
+    try_decode(SchemaName, Binary, []).
+
+-spec try_decode(SchemaName :: atom(), Binary :: binary(), Options :: [option()]) ->
+    {ok, term()} | {error, term()}.
+try_decode(SchemaName, Binary, RawOptions) ->
     try
-        {Object, _Rest} = decode(SchemaName, Binary),
+        Options = options(RawOptions),
+        {Object, _Rest} = decode(SchemaName, Binary, Options),
         {ok, Object}
     catch
         _:E:S ->
@@ -23,73 +39,74 @@ try_decode(SchemaName, Binary) ->
 %%% Internal functions
 %%%===================================================================
 
-decode(SchemaName, Binary) ->
+decode(SchemaName, Binary, Options) ->
     case parthenon_schema_server:get_schema(SchemaName) of
         {ok, Schema} ->
-            do_decode(Binary, Schema);
+            do_decode(Binary, Schema, Options);
         {error, _} = Error ->
             Error
     end.
 
-do_decode(<<${, Rest/binary>>, Schema) ->
-    object(Rest, key, <<>>, #{}, Schema);
-do_decode(<<Invalid, _Rest/binary>>, _Schema) ->
+do_decode(<<${, Rest/binary>>, Schema, Options) ->
+    object(Rest, key, <<>>, make_object(Options), Schema, Options);
+do_decode(<<Invalid, _Rest/binary>>, _Schema, _Options) ->
     throw({invalid_character, Invalid, 1}).
 
-object(<<$=, Rest/binary>>, key, Buffer, Object, Schema) ->
+object(<<$=, Rest/binary>>, key, Buffer, Object, Schema, Options) ->
     Key = to_key(Buffer),
-    object(Rest, {value, Key, undefined}, <<>>, Object, Schema);
-object(<<$=, Rest/binary>>, {value, Key, undefined}, Buffer, Object, Schema) ->
-    object(Rest, {value, Key, undefined}, <<Buffer/binary, $=>>, Object, Schema);
-object(<<$=, Rest/binary>>, {value, Key, LastComma}, Buffer, Object, Schema) ->
+    object(Rest, {value, Key, undefined}, <<>>, Object, Schema, Options);
+object(<<$=, Rest/binary>>, {value, Key, undefined}, Buffer, Object, Schema, Options) ->
+    object(Rest, {value, Key, undefined}, <<Buffer/binary, $=>>, Object, Schema, Options);
+object(<<$=, Rest/binary>>, {value, Key, LastComma}, Buffer, Object, Schema, Options) ->
     Encoder = wrap_encoder(maps:get(Key, Schema, fun identity/1)),
     Value = binary:part(Buffer, 0, LastComma - 1),
     NewKey = to_key(
         binary:part(Buffer, LastComma, byte_size(Buffer) - LastComma)
     ),
-    NewObject = Object#{Key => Encoder(Value)},
-    object(Rest, {value, NewKey, undefined}, <<>>, NewObject, Schema);
-object(<<$[, Rest/binary>>, {value, Key, _}, <<>>, Object, Schema) ->
+    NewObject = update_object(Key, Encoder(Value), Object, Options),
+    object(Rest, {value, NewKey, undefined}, <<>>, NewObject, Schema, Options);
+object(<<$[, Rest/binary>>, {value, Key, _}, <<>>, Object, Schema, Options) ->
     Encoder = maps:get(Key, Schema, fun identity/1),
-    {List, Rest2} = list(Rest, Encoder),
-    NewObject = Object#{Key => List},
+    {List, Rest2} = list(Rest, Encoder, Options),
+    NewObject = update_object(Key, List, Object, Options),
     Rest3 = maybe_consume_character(Rest2, $,),
-    object(Rest3, key, <<>>, NewObject, Schema);
-object(<<${, Rest/binary>>, {value, Key, _}, <<>>, Object, Schema) ->
+    object(Rest3, key, <<>>, NewObject, Schema, Options);
+object(<<${, Rest/binary>>, {value, Key, _}, <<>>, Object, Schema, Options) ->
     Encoder = maps:get(Key, Schema, #{}),
-    {SubObject, Rest2} = object(Rest, key, <<>>, #{}, Encoder),
-    NewObject = Object#{Key => SubObject},
+    {SubObject, Rest2} = object(Rest, key, <<>>, make_object(Options), Encoder, Options),
+    NewObject = update_object(Key, SubObject, Object, Options),
     Rest3 = maybe_consume_character(Rest2, $,),
-    object(Rest3, key, <<>>, NewObject, Schema);
-object(<<$,, Rest/binary>>, {value, Key, _}, Buffer, Object, Schema) ->
-    object(Rest, {value, Key, byte_size(Buffer) + 1}, <<Buffer/binary, $,>>, Object, Schema);
-object(<<$}, Rest/binary>>, {value, Key, _}, Buffer, Object, Schema) ->
+    object(Rest3, key, <<>>, NewObject, Schema, Options);
+object(<<$,, Rest/binary>>, {value, Key, _}, Buffer, Object, Schema, Options) ->
+    NewState = {value, Key, byte_size(Buffer) + 1},
+    object(Rest, NewState, <<Buffer/binary, $,>>, Object, Schema, Options);
+object(<<$}, Rest/binary>>, {value, Key, _}, Buffer, Object, Schema, Options) ->
     Encoder = wrap_encoder(maps:get(Key, Schema, fun identity/1)),
-    {Object#{Key => Encoder(Buffer)}, Rest};
-object(<<$}, Rest/binary>>, key, _Buffer, Object, _Schema) ->
+    {update_object(Key, Encoder(Buffer), Object, Options), Rest};
+object(<<$}, Rest/binary>>, key, _Buffer, Object, _Schema, _Options) ->
     {Object, Rest};
-object(<<Character, Rest/binary>>, key, Buffer, Object, Schema) ->
-    object(Rest, key, <<Buffer/binary, Character>>, Object, Schema);
-object(<<Character, Rest/binary>>, {value, Key, LastComma}, Buffer, Object, Schema) ->
-    object(Rest, {value, Key, LastComma}, <<Buffer/binary, Character>>, Object, Schema).
+object(<<Character, Rest/binary>>, key, Buffer, Object, Schema, Options) ->
+    object(Rest, key, <<Buffer/binary, Character>>, Object, Schema, Options);
+object(<<Character, Rest/binary>>, {value, Key, LastComma}, Buffer, Object, Schema, Options) ->
+    object(Rest, {value, Key, LastComma}, <<Buffer/binary, Character>>, Object, Schema, Options).
 
-list(Binary, Encoder) ->
-    do_list(Binary, [], <<>>, Encoder).
+list(Binary, Encoder, Options) ->
+    do_list(Binary, [], <<>>, Encoder, Options).
 
-do_list(<<$], Rest/binary>>, List, _Buffer, {map_array, _}) ->
+do_list(<<$], Rest/binary>>, List, _Buffer, {map_array, _}, _Options) ->
     {lists:reverse(List), Rest};
-do_list(<<$], Rest/binary>>, List, Buffer, Encoder) ->
+do_list(<<$], Rest/binary>>, List, Buffer, Encoder, _Options) ->
     NewList = lists:reverse([Buffer | List]),
     {Encoder(NewList), Rest};
-do_list(<<${, Rest/binary>>, List, _Buffer, {map_array, Encoder}) ->
-    {Object, Rest2} = object(Rest, key, <<>>, #{}, Encoder),
-    do_list(Rest2, [Object | List], <<>>, {map_array, Encoder});
-do_list(<<$,, Rest/binary>>, List, Buffer, Encoder = {map_array, _}) ->
-    do_list(Rest, List, Buffer, Encoder);
-do_list(<<$,, Rest/binary>>, List, Buffer, Encoder) ->
-    do_list(Rest, [Buffer | List], <<>>, Encoder);
-do_list(<<Character, Rest/binary>>, List, Buffer, Encoder) ->
-    do_list(Rest, List, <<Buffer/binary, Character>>, Encoder).
+do_list(<<${, Rest/binary>>, List, _Buffer, {map_array, Encoder}, Options) ->
+    {Object, Rest2} = object(Rest, key, <<>>, make_object(Options), Encoder, Options),
+    do_list(Rest2, [Object | List], <<>>, {map_array, Encoder}, Options);
+do_list(<<$,, Rest/binary>>, List, Buffer, Encoder = {map_array, _}, Options) ->
+    do_list(Rest, List, Buffer, Encoder, Options);
+do_list(<<$,, Rest/binary>>, List, Buffer, Encoder, Options) ->
+    do_list(Rest, [Buffer | List], <<>>, Encoder, Options);
+do_list(<<Character, Rest/binary>>, List, Buffer, Encoder, Options) ->
+    do_list(Rest, List, <<Buffer/binary, Character>>, Encoder, Options).
 
 maybe_consume_character(<<Character, Rest/binary>>, Character) ->
     Rest;
@@ -115,6 +132,7 @@ to_key(Raw) ->
             try_binary_to_existing_atom(Binary)
     end.
 
+-spec try_binary_to_existing_atom(Binary :: binary()) -> atom() | binary().
 try_binary_to_existing_atom(Binary) ->
     try
         binary_to_existing_atom(Binary, utf8)
@@ -123,5 +141,33 @@ try_binary_to_existing_atom(Binary) ->
             Binary
     end.
 
+make_object(#decode_options{object_format = maps}) ->
+    #{};
+make_object(#decode_options{object_format = proplists}) ->
+    [].
+
+update_object(Key, Value, Object, #decode_options{object_format = maps}) ->
+    Object#{Key => Value};
+update_object(Key, Value, Object, #decode_options{object_format = proplists}) ->
+    [{Key, Value} | Object].
+
+-spec identity(X) -> X.
 identity(X) ->
     X.
+
+-spec options([option()]) -> decode_options().
+options(RawOptions) ->
+    Defaults = #decode_options{},
+    lists:foldl(fun do_options/2, Defaults, RawOptions).
+
+-spec do_options(option(), decode_options()) -> decode_options().
+do_options({object_format, Format}, Options) ->
+    Options#decode_options{object_format = object_format(Format)}.
+
+-spec object_format(maps | proplists | term()) -> maps | proplists.
+object_format(Format = maps) ->
+    Format;
+object_format(Format = proplists) ->
+    Format;
+object_format(InvalidFormat) ->
+    throw({invalid_option_value, {object_format, InvalidFormat}}).
