@@ -42,7 +42,9 @@ groups() ->
             can_handle_unknown_keys,
             can_decode_object_to_proplists,
             can_decode_object_to_tuple,
-            can_handle_spaces_in_values
+            can_handle_spaces_in_values,
+            can_convert_keys_to_atom,
+            can_convert_keys_to_binary
         ]}
     ].
 
@@ -143,6 +145,50 @@ can_handle_spaces_in_values(_Config) ->
             ?A_SCHEMA_NAME,
             <<"{a = 123, b = foo bar , c={d = 1011 ,f=[ foo bar, baz bar]},e=[ 456, 789 ]}">>,
             [{object_format, proplists}]
+        )
+    ).
+
+can_convert_keys_to_atom(_Config) ->
+    ?assertEqual(
+        {ok, #{
+            a => 123,
+            b => <<"foo bar">>,
+            c => #{d => 1011, f => [<<"foo bar">>, <<"baz bar">>], unknown_key_1 => <<"baba">>},
+            e => [456, 789],
+            unknown_key_1 => [<<"ba">>, <<"ba">>],
+            unknown_object_1 => #{
+                non_existing_key_1 => <<"test">>,
+                non_existing_other_1 => [<<"1">>, <<"2">>, <<"3">>]
+            }
+        }},
+        parthenon_decode:try_decode(
+            ?A_SCHEMA_NAME,
+            <<"{a=123,b=foo bar,c={d=1011,f=[foo bar,baz bar],unknown_key_1=baba},e=[456,789],unknown_key_1=[ba,ba],unknown_object_1={non_existing_key_1=test,non_existing_other_1=[1,2,3]}}">>,
+            [{key_format, atom}]
+        )
+    ).
+
+can_convert_keys_to_binary(_Config) ->
+    ?assertEqual(
+        {ok, #{
+            <<"a">> => 123,
+            <<"b">> => <<"foo bar">>,
+            <<"c">> => #{
+                <<"d">> => 1011,
+                <<"f">> => [<<"foo bar">>, <<"baz bar">>],
+                <<"unknown_key">> => <<"baba">>
+            },
+            <<"e">> => [456, 789],
+            <<"unknown_key">> => [<<"ba">>, <<"ba">>],
+            <<"unknown_object">> => #{
+                <<"non_existing_key">> => <<"test">>,
+                <<"non_existing_other">> => [<<"1">>, <<"2">>, <<"3">>]
+            }
+        }},
+        parthenon_decode:try_decode(
+            ?A_SCHEMA_NAME,
+            <<"{a=123,b=foo bar,c={d=1011,f=[foo bar,baz bar],unknown_key=baba},e=[456,789],unknown_key=[ba,ba],unknown_object={non_existing_key=test,non_existing_other=[1,2,3]}}">>,
+            [{key_format, binary}]
         )
     ).
 
