@@ -163,7 +163,7 @@ update_object(Key, Value, {Object}, Options = #decode_options{object_format = tu
 to_key(Key, #decode_options{key_format = atom}) when is_binary(Key) ->
     binary_to_atom(Key, utf8);
 to_key(Key, #decode_options{key_format = binary}) when is_atom(Key) ->
-    atom_to_binary(Key);
+    atom_to_binary(Key, utf8);
 to_key(Key, _) ->
     Key.
 
