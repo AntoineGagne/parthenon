@@ -40,7 +40,8 @@ groups() ->
             can_decode_struct_with_flat_elements,
             can_decode_struct_with_nested_elements,
             can_handle_unknown_keys,
-            can_decode_object_to_proplists
+            can_decode_object_to_proplists,
+            can_decode_object_to_tuple
         ]}
     ].
 
@@ -110,6 +111,22 @@ can_decode_object_to_proplists(_Config) ->
             ?A_SCHEMA_NAME,
             <<"{a=123,b=foo bar,c={d=1011,f=[foo bar,baz bar]},e=[456,789]}">>,
             [{object_format, proplists}]
+        )
+    ).
+
+can_decode_object_to_tuple(_Config) ->
+    ?assertEqual(
+        {ok,
+            {[
+                {e, [456, 789]},
+                {c, {[{f, [<<"foo bar">>, <<"baz bar">>]}, {d, 1011}]}},
+                {b, <<"foo bar">>},
+                {a, 123}
+            ]}},
+        parthenon_decode:try_decode(
+            ?A_SCHEMA_NAME,
+            <<"{a=123,b=foo bar,c={d=1011,f=[foo bar,baz bar]},e=[456,789]}">>,
+            [{object_format, tuple}]
         )
     ).
 

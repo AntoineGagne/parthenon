@@ -7,11 +7,11 @@
 ]).
 
 -record(decode_options, {
-    object_format = maps :: maps | proplists
+    object_format = maps :: maps | proplists | tuple
 }).
 
 -type decode_options() :: #decode_options{}.
--type option() :: {object_format, maps | proplists}.
+-type option() :: {object_format, maps | proplists | tuple}.
 
 -export_type([option/0]).
 
@@ -144,12 +144,16 @@ try_binary_to_existing_atom(Binary) ->
 make_object(#decode_options{object_format = maps}) ->
     #{};
 make_object(#decode_options{object_format = proplists}) ->
-    [].
+    [];
+make_object(#decode_options{object_format = tuple}) ->
+    {[]}.
 
 update_object(Key, Value, Object, #decode_options{object_format = maps}) ->
     Object#{Key => Value};
 update_object(Key, Value, Object, #decode_options{object_format = proplists}) ->
-    [{Key, Value} | Object].
+    [{Key, Value} | Object];
+update_object(Key, Value, {Object}, #decode_options{object_format = tuple}) ->
+    {[{Key, Value} | Object]}.
 
 -spec identity(X) -> X.
 identity(X) ->
@@ -164,10 +168,12 @@ options(RawOptions) ->
 do_options({object_format, Format}, Options) ->
     Options#decode_options{object_format = object_format(Format)}.
 
--spec object_format(maps | proplists | term()) -> maps | proplists.
+-spec object_format(maps | proplists | tuple | term()) -> maps | proplists | tuple.
 object_format(Format = maps) ->
     Format;
 object_format(Format = proplists) ->
+    Format;
+object_format(Format = tuple) ->
     Format;
 object_format(InvalidFormat) ->
     throw({invalid_option_value, {object_format, InvalidFormat}}).
