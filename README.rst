@@ -16,10 +16,32 @@ parthenon
 
 .. sectnum::
 
-A library that parses AWS Athena structures into Erlang terms.
+An OTP application that parses AWS Athena structures into Erlang terms.
 
 Usage
 =====
+
+Inside ``rebar.config``:
+
+.. code-block:: erlang
+    
+    %% ...
+    {deps, [
+        %% ...
+        parthenon
+    ]}. 
+
+Inside ``.app.src``:
+
+.. code-block:: erlang
+    
+    %% ...
+    {applications, [
+        %% ...
+        parthenon
+    ]},
+
+Inside the code:
 
 .. code-block:: erlang
 
