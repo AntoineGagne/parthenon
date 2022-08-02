@@ -32,7 +32,7 @@ extract_identifier({word, _Line, Name}) ->
 
 create_encoder({encoding, _Line, Encoding}) ->
     Encoder = to_encoder(Encoding),
-    with_null_as_undefined(Encoder);
+    with_null_as_undefined(with_trimmed_spaces(Encoder));
 create_encoder({list, Encoder}) when is_map(Encoder) ->
     {map_array, Encoder};
 create_encoder({list, Encoder}) ->
@@ -45,6 +45,11 @@ with_null_as_undefined(F) ->
     fun
         (<<"null">>) -> undefined;
         (Other) -> F(Other)
+    end.
+
+with_trimmed_spaces(F) ->
+    fun(Binary) ->
+        F(string:trim(Binary, both))
     end.
 
 to_encoder(int) ->
