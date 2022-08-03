@@ -19,27 +19,27 @@ Erlang code.
 -dialyzer({nowarn_function, yyrev/2}).
 -export([word_type/1]).
 
-word_type('struct') ->
+
+word_type("struct") ->
     reserved;
-word_type('array') ->
+word_type("array") ->
     reserved;
-word_type('int') ->
+word_type("int") ->
     encoding;
-word_type('string') ->
+word_type("string") ->
     encoding;
-word_type('bigint') ->
+word_type("bigint") ->
     encoding;
-word_type('double') ->
+word_type("double") ->
     encoding;
-word_type('boolean') ->
+word_type("boolean") ->
     encoding;
 word_type(_) ->
     unreserved.
 
 word(TokenLine, TokenChars) ->
-    Word = list_to_atom(TokenChars),
-    case word_type(Word) of
-        reserved  -> {token, {Word, TokenLine}};
-        encoding -> {token, {encoding, TokenLine, Word}};
-        unreserved -> {token, {word, TokenLine, Word}}
+    case word_type(TokenChars) of
+        reserved -> {token, {list_to_atom(TokenChars), TokenLine}};
+        encoding -> {token, {encoding, TokenLine, list_to_atom(TokenChars)}};
+        unreserved -> {token, {word, TokenLine, list_to_binary(TokenChars)}}
     end.
