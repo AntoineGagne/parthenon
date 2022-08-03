@@ -58,16 +58,14 @@ do_decode(<<Invalid, _Rest/binary>>, _Schema, _Options) ->
     throw({invalid_character, Invalid, 1}).
 
 object(<<$=, Rest/binary>>, key, Buffer, Object, Schema, Options) ->
-    Key = to_key(Buffer),
+    {ok, Key} = trim(Buffer),
     object(Rest, {value, Key, undefined}, <<>>, Object, Schema, Options);
 object(<<$=, Rest/binary>>, {value, Key, undefined}, Buffer, Object, Schema, Options) ->
     object(Rest, {value, Key, undefined}, <<Buffer/binary, $=>>, Object, Schema, Options);
 object(<<$=, Rest/binary>>, {value, Key, LastComma}, Buffer, Object, Schema, Options) ->
     Encoder = wrap_encoder(maps:get(Key, Schema, fun identity/1)),
     Value = binary:part(Buffer, 0, LastComma - 1),
-    NewKey = to_key(
-        binary:part(Buffer, LastComma, byte_size(Buffer) - LastComma)
-    ),
+    {ok, NewKey} = trim(binary:part(Buffer, LastComma, byte_size(Buffer) - LastComma)),
     NewObject = update_object(Key, Encoder(Value), Object, Options),
     object(Rest, {value, NewKey, undefined}, <<>>, NewObject, Schema, Options);
 object(<<$[, Rest/binary>>, {value, Key, _}, <<>>, Object, Schema, Options) ->
@@ -126,26 +124,6 @@ wrap_encoder(Fun) ->
             Fun(Value)
     end.
 
-to_key(Raw) ->
-    Trimmed = string:trim(Raw, both),
-    case unicode:characters_to_binary(Trimmed) of
-        {error, _, _} ->
-            Raw;
-        {incomplete, _, _} ->
-            Raw;
-        Binary ->
-            try_binary_to_existing_atom(Binary)
-    end.
-
--spec try_binary_to_existing_atom(Binary :: binary()) -> atom() | binary().
-try_binary_to_existing_atom(Binary) ->
-    try
-        binary_to_existing_atom(Binary, utf8)
-    catch
-        _:_:_ ->
-            Binary
-    end.
-
 make_object(#decode_options{object_format = maps}) ->
     #{};
 make_object(#decode_options{object_format = proplists}) ->
@@ -162,10 +140,38 @@ update_object(Key, Value, {Object}, Options = #decode_options{object_format = tu
 
 to_key(Key, #decode_options{key_format = atom}) when is_binary(Key) ->
     binary_to_atom(Key, utf8);
-to_key(Key, #decode_options{key_format = binary}) when is_atom(Key) ->
-    atom_to_binary(Key, utf8);
+to_key(Key, #decode_options{key_format = existing_atom}) when is_binary(Key) ->
+    to_existing_atom(Key);
 to_key(Key, _) ->
     Key.
+
+to_existing_atom(Raw) ->
+    case trim(Raw) of
+        {error, _} ->
+            Raw;
+        {ok, Binary} ->
+            try_binary_to_existing_atom(Binary)
+    end.
+
+trim(Raw) ->
+    Trimmed = string:trim(Raw, both),
+    case unicode:characters_to_binary(Trimmed) of
+        {error, R1, R2} ->
+            {error, {R1, R2}};
+        Error = {incomplete, _, _} ->
+            {error, Error};
+        Binary ->
+            {ok, Binary}
+    end.
+
+-spec try_binary_to_existing_atom(Binary :: binary()) -> atom() | binary().
+try_binary_to_existing_atom(Binary) ->
+    try
+        binary_to_existing_atom(Binary, utf8)
+    catch
+        _:_:_ ->
+            Binary
+    end.
 
 -spec identity(X) -> X.
 identity(X) ->
