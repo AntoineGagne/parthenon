@@ -10,6 +10,10 @@
     {env, []},
     {modules, []},
 
+    {exclude_patterns, [
+        "parthenon_schema_lexer.erl",
+        "parthenon_schema_parser.erl"
+    ]},
     {licenses, ["BSD3"]},
     {links, [{"Github", "https://github.com/AntoineGagne/parthenon"}]}
 ]}.
