@@ -3,6 +3,7 @@
 [![Build Status](https://github.com/AntoineGagne/parthenon/actions/workflows/erlang.yml/badge.svg)](https://github.com/AntoineGagne/parthenon/actions)
 [![Coverage](https://coveralls.io/repos/AntoineGagne/parthenon/badge.png?branch=master)](https://coveralls.io/r/AntoineGagne/parthenon?branch=master)
 [![Hex Pm](http://img.shields.io/hexpm/v/parthenon.svg?style=flat)](https://hex.pm/packages/parthenon)
+[![Docs](https://img.shields.io/badge/hex-docs-green.svg?style=flat)](https://hexdocs.pm/parthenon)
 
 `parthenon` is an OTP application that parses AWS Athena structures into Erlang terms.
 
