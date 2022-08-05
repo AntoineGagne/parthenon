@@ -6,8 +6,11 @@
 -export([
     add_schema/2,
     decode/2,
-    decode/3
+    decode/3,
+    decode_with_schema/3
 ]).
+
+-type decode_options() :: [parthenon_decode:option()].
 
 %%%===================================================================
 %%% API
@@ -26,9 +29,9 @@ add_schema(SchemaName, RawSchema) ->
 %% Parse the raw Athena structure with the specified schema.
 %% @end
 decode(SchemaName, Binary) ->
-    parthenon_decode:try_decode(SchemaName, Binary).
+    parthenon_decode:try_decode(SchemaName, Binary, []).
 
--spec decode(SchemaName :: atom(), Binary :: binary(), Options :: [parthenon_decode:option()]) ->
+-spec decode(SchemaName :: atom(), Binary :: binary(), Options :: decode_options()) ->
     {ok, term()} | {error, term()}.
 %% @doc
 %% Parse the raw Athena structure with the specified schema and apply the
@@ -61,11 +64,38 @@ decode(SchemaName, Binary) ->
 %% ok = parthenon:add_schema(point, <<"struct<x: int, y: int, z: int>">>).
 %%
 %% %% Decode the `point' structure into a map with binary keys
-%% {ok, #{<<"x">> := 3, <<"y">> := 2, <<"z">> := 4}} = parthenon:decode(point, <<"{x=3, y=2, z=4}">>, [{key_format, binary}, {object_format, maps}]).
+%% {ok, #{<<"x">> := 3, <<"y">> := 2, <<"z">> := 4}} = parthenon:decode(
+%%     point, <<"{x=3, y=2, z=4}">>, [{key_format, binary}, {object_format, maps}]
+%% ).
 %% '''
 %% @end
 decode(SchemaName, Binary, Options) ->
     parthenon_decode:try_decode(SchemaName, Binary, Options).
+
+-spec decode_with_schema(Schema :: binary(), Binary :: binary(), Options :: decode_options()) ->
+    {ok, term()} | {error, term()}.
+%% @doc
+%% Parse the raw Athena structure with the provided raw schema.
+%%
+%% See {@link parthenon:decode/3} for more information about the supported options.
+%%
+%% Example usage:
+%%
+%% ```
+%% %% Decode the `point' structure into a map with binary keys
+%% Schema = <<"struct<x: int, y: int, z: int>">>.
+%% {ok, #{<<"x">> := 3, <<"y">> := 2, <<"z">> := 4}} = parthenon:decode_with_schema(
+%%     Schema, <<"{x=3, y=2, z=4}">>, [{key_format, binary}, {object_format, maps}]
+%% ).
+%% '''
+%% @end
+decode_with_schema(RawSchema, Binary, Options) ->
+    case parthenon_schema:create(RawSchema) of
+        {ok, Schema} ->
+            parthenon_decode:try_decode_with_schema(Schema, Binary, Options);
+        {error, _} = Error ->
+            Error
+    end.
 
 %%%===================================================================
 %%% Internal functions

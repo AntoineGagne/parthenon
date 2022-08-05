@@ -52,7 +52,8 @@ groups() ->
             can_convert_keys_to_atom,
             can_convert_keys_to_binary,
             can_decode_top_level_list,
-            can_decode_top_level_struct_list
+            can_decode_top_level_struct_list,
+            can_decode_with_schema
         ]}
     ].
 
@@ -209,6 +210,13 @@ can_decode_top_level_struct_list(_Config) ->
     ?assertEqual(
         {ok, [#{a => 1, b => <<"foo">>}, #{a => 4, b => <<"bar">>}]},
         parthenon_decode:try_decode(?A_FOURTH_SCHEMA_NAME, <<"[{a=1, b=foo}, {a=4, b=bar}]">>)
+    ).
+
+can_decode_with_schema(_Config) ->
+    {ok, Schema} = parthenon_schema:create(?A_FOURTH_SCHEMA),
+    ?assertEqual(
+        {ok, [#{a => 1, b => <<"foo">>}, #{a => 4, b => <<"bar">>}]},
+        parthenon_decode:try_decode_with_schema(Schema, <<"[{a=1, b=foo}, {a=4, b=bar}]">>, [])
     ).
 
 %%%===================================================================

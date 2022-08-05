@@ -3,7 +3,8 @@
 %% API
 -export([
     try_decode/2,
-    try_decode/3
+    try_decode/3,
+    try_decode_with_schema/3
 ]).
 
 -record(decode_options, {
@@ -39,6 +40,19 @@ try_decode(SchemaName, Binary, RawOptions) ->
             {error, _} = Error ->
                 Error
         end
+    catch
+        _:E:S ->
+            {error, {E, S}}
+    end.
+
+-spec try_decode_with_schema(
+    Schema :: parthenon_schema:schema(), Binary :: binary(), Options :: [option()]
+) -> {ok, term()} | {error, term()}.
+try_decode_with_schema(Schema, Binary, RawOptions) ->
+    try
+        Options = options(RawOptions),
+        {Object, _Rest} = do_decode(Binary, Schema, Options),
+        {ok, Object}
     catch
         _:E:S ->
             {error, {E, S}}
