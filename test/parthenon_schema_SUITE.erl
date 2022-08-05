@@ -14,6 +14,8 @@ groups() ->
         {all, [parallel], [
             can_parse_flat_struct,
             can_parse_nested_structs,
+            can_parse_top_level_array,
+            can_parse_top_level_struct_array,
             return_error_on_invalid_encoding,
             contain_correct_encoder,
             can_parse_complex_schema,
@@ -59,6 +61,18 @@ can_parse_nested_structs(_Config) ->
     ?assertMatch(
         {ok, #{<<"test_1">> := {map_array, #{<<"a">> := {map_array, #{<<"b">> := _}}}}}},
         parthenon_schema:create("struct<test_1:array<struct<a: array<struct<b: boolean>>>>>")
+    ).
+
+can_parse_top_level_array(_Config) ->
+    ?assertMatch(
+        {ok, _},
+        parthenon_schema:create("array<boolean>")
+    ).
+
+can_parse_top_level_struct_array(_Config) ->
+    ?assertMatch(
+        {ok, {map_array, #{<<"test_1">> := _}}},
+        parthenon_schema:create("array<struct<test_1: int>>")
     ).
 
 return_error_on_invalid_encoding(_Config) ->

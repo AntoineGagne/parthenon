@@ -14,6 +14,6 @@
         "parthenon_schema_lexer.erl",
         "parthenon_schema_parser.erl"
     ]},
-    {licenses, ["BSD3"]},
+    {licenses, ["BSD-3-Clause"]},
     {links, [{"Github", "https://github.com/AntoineGagne/parthenon"}]}
 ]}.

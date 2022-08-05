@@ -1,10 +1,11 @@
-Nonterminals schema struct_root struct_list struct_list_elements struct_element encoder.
+Nonterminals schema struct_root struct_list struct_list_elements struct_element list encoder.
 
 Terminals '<' '>' ',' ':' 'struct' 'array' word encoding.
 
 Rootsymbol schema.
 
 schema -> struct_root : '$1'.
+schema -> list : '$1'.
 
 struct_root -> 'struct' struct_list : maps:from_list('$2').
 
@@ -18,9 +19,11 @@ struct_element -> word ':' encoder : mapping('$1', '$3').
 
 encoder -> encoding : create_encoder('$1').
 
-encoder -> 'array' '<' encoder '>' : create_encoder({list, '$3'}).
+encoder -> list : '$1'.
 
 encoder -> struct_root : '$1'.
+
+list -> 'array' '<' encoder '>' : create_encoder({list, '$3'}).
 
 Erlang code.
 
