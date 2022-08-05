@@ -11,9 +11,13 @@
     <<"struct<a: int, b: string, c: struct<d: int, f: array<string>>, e: array<bigint>>">>
 ).
 -define(ANOTHER_SCHEMA_NAME, schema_2).
+-define(A_THIRD_SCHEMA_NAME, schema_3).
+-define(A_FOURTH_SCHEMA_NAME, schema_4).
 -define(ANOTHER_SCHEMA,
     <<"struct<a: int, b: string, c: string, d: int>">>
 ).
+-define(A_THIRD_SCHEMA, <<"array<int>">>).
+-define(A_FOURTH_SCHEMA, <<"array<struct<a: int, b: string>>">>).
 
 all() ->
     [
@@ -25,6 +29,8 @@ init_per_suite(Config) ->
     unlink(Pid),
     ok = parthenon_schema_server:add_schema(?A_SCHEMA_NAME, ?A_SCHEMA),
     ok = parthenon_schema_server:add_schema(?ANOTHER_SCHEMA_NAME, ?ANOTHER_SCHEMA),
+    ok = parthenon_schema_server:add_schema(?A_THIRD_SCHEMA_NAME, ?A_THIRD_SCHEMA),
+    ok = parthenon_schema_server:add_schema(?A_FOURTH_SCHEMA_NAME, ?A_FOURTH_SCHEMA),
     [{schema_server_pid, Pid} | Config].
 
 end_per_suite(Config) ->
@@ -44,7 +50,9 @@ groups() ->
             can_decode_object_to_tuple,
             can_handle_spaces_in_values,
             can_convert_keys_to_atom,
-            can_convert_keys_to_binary
+            can_convert_keys_to_binary,
+            can_decode_top_level_list,
+            can_decode_top_level_struct_list
         ]}
     ].
 
@@ -190,6 +198,17 @@ can_convert_keys_to_binary(_Config) ->
             <<"{a=123,b=foo bar,c={d=1011,f=[foo bar,baz bar],unknown_key=baba},e=[456,789],unknown_key=[ba,ba],unknown_object={non_existing_key=test,non_existing_other=[1,2,3]}}">>,
             [{key_format, binary}]
         )
+    ).
+
+can_decode_top_level_list(_Config) ->
+    ?assertEqual(
+        {ok, [1, 2, 3, 4]}, parthenon_decode:try_decode(?A_THIRD_SCHEMA_NAME, <<"[1, 2, 3, 4]">>)
+    ).
+
+can_decode_top_level_struct_list(_Config) ->
+    ?assertEqual(
+        {ok, [#{a => 1, b => <<"foo">>}, #{a => 4, b => <<"bar">>}]},
+        parthenon_decode:try_decode(?A_FOURTH_SCHEMA_NAME, <<"[{a=1, b=foo}, {a=4, b=bar}]">>)
     ).
 
 %%%===================================================================

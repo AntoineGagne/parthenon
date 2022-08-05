@@ -3,9 +3,10 @@
 %% API
 -export([create/1]).
 
--type schema() :: #{schema_key() := schema_value()}.
+-type schema() :: encoder() | schema_object().
+-type schema_object() :: #{schema_key() := schema_value()}.
 -type schema_key() :: atom().
--type schema_value() :: encoder() | schema() | {map_array, schema()}.
+-type schema_value() :: encoder() | schema_object() | {map_array, schema()}.
 -type encoder() :: fun((binary()) -> supported_types()).
 -type supported_types() ::
     undefined | integer() | float() | binary() | boolean() | [supported_types()].

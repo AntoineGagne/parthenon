@@ -33,8 +33,12 @@ try_decode(SchemaName, Binary) ->
 try_decode(SchemaName, Binary, RawOptions) ->
     try
         Options = options(RawOptions),
-        {Object, _Rest} = decode(SchemaName, Binary, Options),
-        {ok, Object}
+        case decode(SchemaName, Binary, Options) of
+            {ok, {Object, _Rest}} ->
+                {ok, Object};
+            {error, _} = Error ->
+                Error
+        end
     catch
         _:E:S ->
             {error, {E, S}}
@@ -47,13 +51,15 @@ try_decode(SchemaName, Binary, RawOptions) ->
 decode(SchemaName, Binary, Options) ->
     case parthenon_schema_server:get_schema(SchemaName) of
         {ok, Schema} ->
-            do_decode(Binary, Schema, Options);
+            {ok, do_decode(Binary, Schema, Options)};
         {error, _} = Error ->
             Error
     end.
 
 do_decode(<<${, Rest/binary>>, Schema, Options) ->
     object(Rest, key, <<>>, make_object(Options), Schema, Options);
+do_decode(<<$[, Rest/binary>>, Schema, Options) ->
+    list(Rest, Schema, Options);
 do_decode(<<Invalid, _Rest/binary>>, _Schema, _Options) ->
     throw({invalid_character, Invalid, 1}).
 
