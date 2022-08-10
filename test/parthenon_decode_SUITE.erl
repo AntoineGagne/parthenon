@@ -151,7 +151,7 @@ can_handle_spaces_in_values(_Config) ->
         ]},
         parthenon_decode:try_decode(
             ?A_SCHEMA_NAME,
-            <<"{a = 123, b = foo bar , c={d = 1011 ,f=[ foo bar, baz bar]},e=[ 456, 789 ]}">>,
+            <<"{\n\ta = 123,\n\tb = foo bar ,\n\t c = {\n\t\td = 1011 ,\n\t\tf = [ foo bar,\n baz bar ] } ,\n\t e = [ 456, 789 ] } ">>,
             [{object_format, proplists}]
         )
     ).
