@@ -181,7 +181,7 @@ to_key(Key, #decode_options{key_format = atom}) when is_binary(Key) ->
 to_key(Key, #decode_options{key_format = existing_atom}) when is_binary(Key) ->
     to_existing_atom(Key);
 to_key(Key, _) ->
-    trim(Key).
+    Key.
 
 to_existing_atom(Raw) ->
     Binary = trim(Raw),
