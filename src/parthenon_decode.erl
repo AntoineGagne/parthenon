@@ -112,8 +112,8 @@ object_value(<<Character, Rest/binary>>, Key, LastComma, Buffer, Object, Nexts, 
 list(<<$], Rest/binary>>, List, _Buffer, Nexts, {map_array, _}, _Options) ->
     next(Rest, lists:reverse(List), Nexts);
 list(<<$], Rest/binary>>, List, Buffer, Nexts, Encoder, _Options) ->
-    NewList = lists:reverse([Buffer | List]),
-    next(Rest, Encoder(NewList), Nexts);
+    NewList = lists:reverse([Encoder(Buffer) | List]),
+    next(Rest, NewList, Nexts);
 list(<<${, Rest/binary>>, List, _Buffer, Nexts, {map_array, Encoder}, Options) ->
     Next = {list, List, {map_array, Encoder}, Options},
     object(Rest, make_object(Options), [Next | Nexts], Encoder, Options);
@@ -121,7 +121,7 @@ list(<<$,, Rest/binary>>, List, _Buffer, Nexts, Encoder = {map_array, _}, Option
     Next = {list, List, Encoder, Options},
     whitespace(Rest, Next, Nexts);
 list(<<$,, Rest/binary>>, List, Buffer, Nexts, Encoder, Options) ->
-    Next = {list, [Buffer | List], Encoder, Options},
+    Next = {list, [Encoder(Buffer) | List], Encoder, Options},
     whitespace(Rest, Next, Nexts);
 list(<<Character, Rest/binary>>, List, Buffer, Nexts, Encoder, Options) ->
     list(Rest, List, <<Buffer/binary, Character>>, Nexts, Encoder, Options).
