@@ -3,7 +3,7 @@
 %% API
 -export([create/1]).
 
--type schema() :: encoder() | schema_object().
+-type schema() :: schema_value().
 -type schema_object() :: #{schema_key() := schema_value()}.
 -type schema_key() :: atom().
 -type schema_value() :: encoder() | schema_object() | {map_array, schema()}.
@@ -43,5 +43,5 @@ create(RawSchema) ->
 -spec ensure_string(binary() | string()) -> string().
 ensure_string(Binary) when is_binary(Binary) ->
     binary_to_list(Binary);
-ensure_string(String) ->
+ensure_string(String) when is_list(String) ->
     String.

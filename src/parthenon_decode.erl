@@ -11,6 +11,8 @@
     object_format = maps :: object_format()
 }).
 
+-type schema() :: parthenon_schema:schema().
+
 -type decode_options() :: #decode_options{}.
 -type option() ::
     {object_format, object_format()}
@@ -18,18 +20,36 @@
 -type object_format() :: maps | proplists | tuple.
 -type key_format() :: existing_atom | atom | binary.
 
+-type value() ::
+    undefined | integer() | float() | binary() | boolean() | array() | object().
+-type key_type() :: binary() | atom().
+
+-type array() :: [value()].
+-type object() ::
+    #{key_type() => value()}
+    | [{key_type(), value()}]
+    | {[{key_type(), value()}]}.
+
+-type whitespace_next() ::
+    {object_key, object(), schema(), decode_options()}
+    | {object_value, Key :: binary(), object(), schema(), decode_options()}
+    | {list, array(), schema(), decode_options()}.
+-type next() ::
+    {object, Key :: binary(), object(), schema(), decode_options()}
+    | {list, array(), schema(), decode_options()}.
+
 -export_type([option/0]).
 
 %%%===================================================================
 %%% API
 %%%===================================================================
 
--spec try_decode(SchemaName :: atom(), Binary :: binary()) -> {ok, term()} | {error, term()}.
+-spec try_decode(SchemaName :: atom(), Binary :: binary()) -> {ok, value()} | {error, term()}.
 try_decode(SchemaName, Binary) ->
     try_decode(SchemaName, Binary, []).
 
 -spec try_decode(SchemaName :: atom(), Binary :: binary(), Options :: [option()]) ->
-    {ok, term()} | {error, term()}.
+    {ok, value()} | {error, term()}.
 try_decode(SchemaName, Binary, RawOptions) ->
     try
         Options = options(RawOptions),
@@ -48,6 +68,8 @@ try_decode(SchemaName, Binary, RawOptions) ->
 %%% Internal functions
 %%%===================================================================
 
+-spec decode(SchemaName :: atom(), binary(), decode_options()) ->
+    {ok, value()} | {error, term()}.
 decode(SchemaName, Binary, Options) ->
     case parthenon_schema_server:get_schema(SchemaName) of
         {ok, Schema} ->
@@ -56,6 +78,7 @@ decode(SchemaName, Binary, Options) ->
             Error
     end.
 
+-spec do_decode(binary(), schema(), decode_options()) -> value().
 do_decode(<<${, Rest/binary>>, Schema, Options) ->
     Next = {object_key, make_object(Options), Schema, Options},
     whitespace(Rest, Next, []);
@@ -65,10 +88,14 @@ do_decode(<<$[, Rest/binary>>, Schema, Options) ->
 do_decode(<<Invalid, _Rest/binary>>, _Schema, _Options) ->
     throw({invalid_character, Invalid, 1}).
 
+-spec object(binary(), object(), [next()], schema(), decode_options()) ->
+    value().
 object(Binary, Object, Nexts, Schema, Options) ->
     Next = {object_key, Object, Schema, Options},
     whitespace(Binary, Next, Nexts).
 
+-spec object_key(binary(), Buffer :: binary(), object(), [next()], schema(), decode_options()) ->
+    value().
 object_key(<<$=, Rest/binary>>, Key, Object, Nexts, Schema, Options) ->
     Next = {object_value, trim(Key), Object, Schema, Options},
     whitespace(Rest, Next, Nexts);
@@ -79,6 +106,17 @@ object_key(<<$}, Rest/binary>>, _Buffer, Object, Nexts, _Schema, _Options) ->
 object_key(<<Character, Rest/binary>>, Buffer, Object, Nexts, Schema, Options) ->
     object_key(Rest, <<Buffer/binary, Character>>, Object, Nexts, Schema, Options).
 
+-spec object_value(
+    binary(),
+    Key :: binary(),
+    undefined | non_neg_integer(),
+    Buffer :: binary(),
+    object(),
+    [next()],
+    parthenon_schema:schema_object(),
+    decode_options()
+) ->
+    value().
 object_value(<<$=, Rest/binary>>, Key, undefined, Buffer, Object, Nexts, Schema, Options) ->
     object_value(Rest, Key, undefined, <<Buffer/binary, $=>>, Object, Nexts, Schema, Options);
 object_value(<<$=, Rest/binary>>, Key, LastComma, Buffer, Object, Nexts, Schema, Options) ->
@@ -109,6 +147,8 @@ object_value(<<Character, Rest/binary>>, Key, LastComma, Buffer, Object, Nexts, 
     NewBuffer = <<Buffer/binary, Character>>,
     object_value(Rest, Key, LastComma, NewBuffer, Object, Nexts, Schema, Options).
 
+-spec list(binary(), list(), Buffer :: binary(), [next()], schema(), decode_options()) ->
+    value().
 list(<<$], Rest/binary>>, List, _Buffer, Nexts, {map_array, _}, _Options) ->
     next(Rest, lists:reverse(List), Nexts);
 list(<<$], Rest/binary>>, List, Buffer, Nexts, Encoder, _Options) ->
@@ -126,6 +166,7 @@ list(<<$,, Rest/binary>>, List, Buffer, Nexts, Encoder, Options) ->
 list(<<Character, Rest/binary>>, List, Buffer, Nexts, Encoder, Options) ->
     list(Rest, List, <<Buffer/binary, Character>>, Nexts, Encoder, Options).
 
+-spec next(binary(), parthenon_schema:supported_types() | object(), [next()]) -> value().
 next(<<_/binary>>, Value, []) ->
     Value;
 next(<<Rest/binary>>, Value, [Next | Nexts]) ->
@@ -138,6 +179,7 @@ next(<<Rest/binary>>, Value, [Next | Nexts]) ->
             list(Rest, WithValue, <<>>, Nexts, Encoder, Options)
     end.
 
+-spec whitespace(binary(), whitespace_next(), [next()]) -> value().
 whitespace(<<$\n, Rest/binary>>, Next, Nexts) ->
     whitespace(Rest, Next, Nexts);
 whitespace(<<$\t, Rest/binary>>, Next, Nexts) ->
@@ -162,6 +204,7 @@ wrap_encoder(Fun) ->
             Fun(Value)
     end.
 
+-spec make_object(decode_options()) -> object().
 make_object(#decode_options{object_format = maps}) ->
     #{};
 make_object(#decode_options{object_format = proplists}) ->
@@ -169,6 +212,7 @@ make_object(#decode_options{object_format = proplists}) ->
 make_object(#decode_options{object_format = tuple}) ->
     {[]}.
 
+-spec update_object(Key :: binary(), value(), object(), decode_options()) -> object().
 update_object(Key, Value, Object, Options = #decode_options{object_format = maps}) ->
     Object#{to_key(Key, Options) => Value};
 update_object(Key, Value, Object, Options = #decode_options{object_format = proplists}) ->
@@ -176,6 +220,7 @@ update_object(Key, Value, Object, Options = #decode_options{object_format = prop
 update_object(Key, Value, {Object}, Options = #decode_options{object_format = tuple}) ->
     {[{to_key(Key, Options), Value} | Object]}.
 
+-spec to_key(binary(), decode_options()) -> key_type().
 to_key(Key, #decode_options{key_format = atom}) when is_binary(Key) ->
     binary_to_atom(Key, utf8);
 to_key(Key, #decode_options{key_format = existing_atom}) when is_binary(Key) ->
@@ -183,10 +228,12 @@ to_key(Key, #decode_options{key_format = existing_atom}) when is_binary(Key) ->
 to_key(Key, _) ->
     Key.
 
+-spec to_existing_atom(binary()) -> atom() | binary().
 to_existing_atom(Raw) ->
     Binary = trim(Raw),
     try_binary_to_existing_atom(Binary).
 
+-spec trim(binary()) -> binary().
 trim(Raw) ->
     Trimmed = string:trim(Raw, both),
     case unicode:characters_to_binary(Trimmed) of
