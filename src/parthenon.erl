@@ -60,8 +60,20 @@ decode(SchemaName, Binary) ->
 %% %% Register the `point' schema into the registry
 %% ok = parthenon:add_schema(point, <<"struct<x: int, y: int, z: int>">>).
 %%
+%% %% Register the `coordinates' schema into the registry
+%% ok = parthenon:add_schema(coordinates, <<"array<struct<x: int, y: int, z: int>>">>).
+%%
 %% %% Decode the `point' structure into a map with binary keys
-%% {ok, #{<<"x">> := 3, <<"y">> := 2, <<"z">> := 4}} = parthenon:decode(point, <<"{x=3, y=2, z=4}">>, [{key_format, binary}, {object_format, maps}]).
+%% {ok, #{<<"x">> := 3, <<"y">> := 2, <<"z">> := 4}} = parthenon:decode(
+%%     point, <<"{x=3, y=2, z=4}">>, [{key_format, binary}, {object_format, maps}]
+%% ),
+%%
+%% %% Decode the `coordinates' array into a list of maps with binary keys
+%% {ok, [#{<<"x">> := 3, <<"y">> := 2, <<"z">> := 4}, #{<<"x">> := 5, <<"y">> := 6, <<"z">> := 7}]} = parthenon:decode(
+%%      coordinates, <<"[{x=3, y=2, z=4}, {x=5, y=6, z=7}]">>, [
+%%          {key_format, binary}, {object_format, maps}
+%%      ]
+%%  ),
 %% '''
 %% @end
 decode(SchemaName, Binary, Options) ->
