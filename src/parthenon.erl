@@ -21,7 +21,8 @@
 add_schema(SchemaName, RawSchema) ->
     parthenon_schema_server:add_schema(SchemaName, RawSchema).
 
--spec decode(SchemaName :: atom(), Binary :: binary()) -> {ok, term()} | {error, term()}.
+-spec decode(SchemaName :: atom(), Binary :: binary()) ->
+    {ok, parthenon_decode:value()} | {error, term()}.
 %% @doc
 %% Parse the raw Athena structure with the specified schema.
 %% @end
@@ -29,7 +30,7 @@ decode(SchemaName, Binary) ->
     parthenon_decode:try_decode(SchemaName, Binary).
 
 -spec decode(SchemaName :: atom(), Binary :: binary(), Options :: [parthenon_decode:option()]) ->
-    {ok, term()} | {error, term()}.
+    {ok, parthenon_decode:value()} | {error, term()}.
 %% @doc
 %% Parse the raw Athena structure with the specified schema and apply the
 %% specified options.
@@ -60,8 +61,20 @@ decode(SchemaName, Binary) ->
 %% %% Register the `point' schema into the registry
 %% ok = parthenon:add_schema(point, <<"struct<x: int, y: int, z: int>">>).
 %%
+%% %% Register the `coordinates' schema into the registry
+%% ok = parthenon:add_schema(coordinates, <<"array<struct<x: int, y: int, z: int>>">>).
+%%
 %% %% Decode the `point' structure into a map with binary keys
-%% {ok, #{<<"x">> := 3, <<"y">> := 2, <<"z">> := 4}} = parthenon:decode(point, <<"{x=3, y=2, z=4}">>, [{key_format, binary}, {object_format, maps}]).
+%% {ok, #{<<"x">> := 3, <<"y">> := 2, <<"z">> := 4}} = parthenon:decode(
+%%     point, <<"{x=3, y=2, z=4}">>, [{key_format, binary}, {object_format, maps}]
+%% ),
+%%
+%% %% Decode the `coordinates' array into a list of maps with binary keys
+%% {ok, [#{<<"x">> := 3, <<"y">> := 2, <<"z">> := 4}, #{<<"x">> := 5, <<"y">> := 6, <<"z">> := 7}]} = parthenon:decode(
+%%      coordinates, <<"[{x=3, y=2, z=4}, {x=5, y=6, z=7}]">>, [
+%%          {key_format, binary}, {object_format, maps}
+%%      ]
+%%  ),
 %% '''
 %% @end
 decode(SchemaName, Binary, Options) ->

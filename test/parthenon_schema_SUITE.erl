@@ -95,13 +95,13 @@ contain_correct_encoder(_Config) ->
     ?assertEqual(1.0, apply_encoder(<<"double_">>, <<"1.0">>, Schema)),
     ?assertEqual(100, apply_encoder(<<"big_integer">>, <<"100">>, Schema)),
     ?assertEqual(<<"test">>, apply_encoder(<<"string_">>, <<"test">>, Schema)),
-    ?assertEqual([2], apply_encoder(<<"integer_list">>, [<<"2">>], Schema)),
+    ?assertEqual([2], apply_list_encoder(<<"integer_list">>, [<<"2">>], Schema)),
     ?assertEqual(
-        [true, false], apply_encoder(<<"boolean_list">>, [<<"true">>, <<"false">>], Schema)
+        [true, false], apply_list_encoder(<<"boolean_list">>, [<<"true">>, <<"false">>], Schema)
     ),
-    ?assertEqual([2.0], apply_encoder(<<"double_list">>, [<<"2.0">>], Schema)),
-    ?assertEqual([101], apply_encoder(<<"big_integer_list">>, [<<"101">>], Schema)),
-    ?assertEqual([<<"test_2">>], apply_encoder(<<"string_list">>, [<<"test_2">>], Schema)).
+    ?assertEqual([2.0], apply_list_encoder(<<"double_list">>, [<<"2.0">>], Schema)),
+    ?assertEqual([101], apply_list_encoder(<<"big_integer_list">>, [<<"101">>], Schema)),
+    ?assertEqual([<<"test_2">>], apply_list_encoder(<<"string_list">>, [<<"test_2">>], Schema)).
 
 can_parse_complex_schema(Config) ->
     ?assertMatch({ok, _}, parthenon_schema:create(?config(raw_schema, Config))).
@@ -120,15 +120,14 @@ return_undefined_on_null_values(_Config) ->
     ?assertEqual(undefined, apply_encoder(<<"double_">>, <<"null">>, Schema)),
     ?assertEqual(undefined, apply_encoder(<<"big_integer">>, <<"null">>, Schema)),
     ?assertEqual(undefined, apply_encoder(<<"string_">>, <<"null">>, Schema)),
-    ?assertEqual(undefined, apply_encoder(<<"integer_list">>, <<"null">>, Schema)),
-    ?assertEqual([undefined], apply_encoder(<<"integer_list">>, [<<"null">>], Schema)),
+    ?assertEqual([undefined], apply_list_encoder(<<"integer_list">>, [<<"null">>], Schema)),
     ?assertEqual(
         [undefined, undefined],
-        apply_encoder(<<"boolean_list">>, [<<"null">>, <<"null">>], Schema)
+        apply_list_encoder(<<"boolean_list">>, [<<"null">>, <<"null">>], Schema)
     ),
-    ?assertEqual([undefined], apply_encoder(<<"double_list">>, [<<"null">>], Schema)),
-    ?assertEqual([undefined], apply_encoder(<<"big_integer_list">>, [<<"null">>], Schema)),
-    ?assertEqual([undefined], apply_encoder(<<"string_list">>, [<<"null">>], Schema)).
+    ?assertEqual([undefined], apply_list_encoder(<<"double_list">>, [<<"null">>], Schema)),
+    ?assertEqual([undefined], apply_list_encoder(<<"big_integer_list">>, [<<"null">>], Schema)),
+    ?assertEqual([undefined], apply_list_encoder(<<"string_list">>, [<<"null">>], Schema)).
 
 %%%===================================================================
 %%% Internal functions
@@ -137,3 +136,7 @@ return_undefined_on_null_values(_Config) ->
 apply_encoder(Field, Value, Schema) ->
     Encoder = maps:get(Field, Schema),
     Encoder(Value).
+
+apply_list_encoder(Field, Value, Schema) ->
+    Encoder = maps:get(Field, Schema),
+    [Encoder(V) || V <- Value].

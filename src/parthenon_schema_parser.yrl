@@ -39,8 +39,7 @@ create_encoder({encoding, _Line, Encoding}) ->
 create_encoder({list, Encoder}) when is_map(Encoder) ->
     {map_array, Encoder};
 create_encoder({list, Encoder}) ->
-    ListEncoder = fun(List) -> lists:map(Encoder, List) end,
-    with_null_as_undefined(ListEncoder);
+    with_null_as_undefined(Encoder);
 create_encoder(Unknown) ->
     throw({unknown_encoding, Unknown}).
 
