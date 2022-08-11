@@ -38,7 +38,10 @@
     {object, Key :: binary(), object(), schema(), decode_options()}
     | {list, array(), schema(), decode_options()}.
 
--export_type([option/0]).
+-export_type([
+    option/0,
+    value/0
+]).
 
 %%%===================================================================
 %%% API

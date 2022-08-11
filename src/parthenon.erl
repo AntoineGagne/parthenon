@@ -21,7 +21,8 @@
 add_schema(SchemaName, RawSchema) ->
     parthenon_schema_server:add_schema(SchemaName, RawSchema).
 
--spec decode(SchemaName :: atom(), Binary :: binary()) -> {ok, term()} | {error, term()}.
+-spec decode(SchemaName :: atom(), Binary :: binary()) ->
+    {ok, parthenon_decode:value()} | {error, term()}.
 %% @doc
 %% Parse the raw Athena structure with the specified schema.
 %% @end
@@ -29,7 +30,7 @@ decode(SchemaName, Binary) ->
     parthenon_decode:try_decode(SchemaName, Binary).
 
 -spec decode(SchemaName :: atom(), Binary :: binary(), Options :: [parthenon_decode:option()]) ->
-    {ok, term()} | {error, term()}.
+    {ok, parthenon_decode:value()} | {error, term()}.
 %% @doc
 %% Parse the raw Athena structure with the specified schema and apply the
 %% specified options.
