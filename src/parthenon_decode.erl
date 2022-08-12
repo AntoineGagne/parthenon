@@ -100,7 +100,7 @@ object(Binary, Object, Nexts, Schema, Options) ->
 -spec object_key(binary(), Buffer :: binary(), object(), [next()], schema(), decode_options()) ->
     value().
 object_key(<<$=, Rest/binary>>, Key, Object, Nexts, Schema, Options) ->
-    Next = {object_value, parthenon_utils:trim(Key), Object, Schema, Options},
+    Next = {object_value, parthenon_utils:lightweight_trim(Key), Object, Schema, Options},
     whitespace(Rest, Next, Nexts);
 object_key(<<$,, Rest/binary>>, _Key, Object, Nexts, Schema, Options) ->
     object_key(Rest, <<>>, Object, Nexts, Schema, Options);
@@ -125,7 +125,9 @@ object_value(<<$=, Rest/binary>>, Key, undefined, Buffer, Object, Nexts, Schema,
 object_value(<<$=, Rest/binary>>, Key, LastComma, Buffer, Object, Nexts, Schema, Options) ->
     Encoder = wrap_encoder(maps:get(Key, Schema, fun identity/1)),
     Value = binary:part(Buffer, 0, LastComma - 1),
-    NewKey = parthenon_utils:trim(binary:part(Buffer, LastComma, byte_size(Buffer) - LastComma)),
+    NewKey = parthenon_utils:lightweight_trim(
+        binary:part(Buffer, LastComma, byte_size(Buffer) - LastComma)
+    ),
     NewObject = update_object(Key, Encoder(Value), Object, Options),
     whitespace(Rest, {object_value, NewKey, NewObject, Schema, Options}, Nexts);
 object_value(<<$[, Rest/binary>>, Key, _, <<>>, Object, Nexts, Schema, Options) ->

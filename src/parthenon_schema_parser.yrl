@@ -27,13 +27,6 @@ list -> 'array' '<' encoder '>' : create_encoder({list, '$3'}).
 
 Erlang code.
 
--compile(
-    {inline, [
-        lightweight_trim/1,
-        do_lightweight_trim/2
-    ]}
-).
-
 mapping(Identifier, Encoder) ->
     {extract_identifier(Identifier), Encoder}.
 
@@ -66,24 +59,8 @@ with_trim(F) ->
 
 with_lightweight_trim(F) ->
     fun(Binary) ->
-        F(lightweight_trim(Binary))
+        F(parthenon_utils:lightweight_trim(Binary))
     end.
-
-lightweight_trim(Binary) ->
-    do_lightweight_trim(Binary, <<>>).
-
-do_lightweight_trim(<<$\n, Rest/binary>>, Buffer) ->
-    do_lightweight_trim(Rest, Buffer);
-do_lightweight_trim(<<$\t, Rest/binary>>, Buffer) ->
-    do_lightweight_trim(Rest, Buffer);
-do_lightweight_trim(<<$\s, Rest/binary>>, Buffer) ->
-    do_lightweight_trim(Rest, Buffer);
-do_lightweight_trim(<<$\r, Rest/binary>>, Buffer) ->
-    do_lightweight_trim(Rest, Buffer);
-do_lightweight_trim(<<Character, Rest/binary>>, Buffer) ->
-    do_lightweight_trim(Rest, <<Buffer/binary, Character>>);
-do_lightweight_trim(<<>>, Buffer) ->
-    Buffer.
 
 to_encoder(int) ->
     fun binary_to_integer/1;
