@@ -13,11 +13,13 @@
 -define(ANOTHER_SCHEMA_NAME, schema_2).
 -define(A_THIRD_SCHEMA_NAME, schema_3).
 -define(A_FOURTH_SCHEMA_NAME, schema_4).
+-define(A_FIFTH_SCHEMA_NAME, schema_5).
 -define(ANOTHER_SCHEMA,
     <<"struct<a: int, b: string, c: string, d: int>">>
 ).
 -define(A_THIRD_SCHEMA, <<"array<int>">>).
 -define(A_FOURTH_SCHEMA, <<"array<struct<a: int, b: string>>">>).
+-define(A_FIFTH_SCHEMA, <<"struct<a: int, b: array<struct<c: int, d: string>>>">>).
 
 all() ->
     [
@@ -31,6 +33,7 @@ init_per_suite(Config) ->
     ok = parthenon_schema_server:add_schema(?ANOTHER_SCHEMA_NAME, ?ANOTHER_SCHEMA),
     ok = parthenon_schema_server:add_schema(?A_THIRD_SCHEMA_NAME, ?A_THIRD_SCHEMA),
     ok = parthenon_schema_server:add_schema(?A_FOURTH_SCHEMA_NAME, ?A_FOURTH_SCHEMA),
+    ok = parthenon_schema_server:add_schema(?A_FIFTH_SCHEMA_NAME, ?A_FIFTH_SCHEMA),
     [{schema_server_pid, Pid} | Config].
 
 end_per_suite(Config) ->
@@ -52,7 +55,8 @@ groups() ->
             can_convert_keys_to_atom,
             can_convert_keys_to_binary,
             can_decode_top_level_list,
-            can_decode_top_level_struct_list
+            can_decode_top_level_struct_list,
+            can_handle_struct_ending_with_array_with_nested_struct
         ]}
     ].
 
@@ -209,6 +213,14 @@ can_decode_top_level_struct_list(_Config) ->
     ?assertEqual(
         {ok, [#{a => 1, b => <<"foo">>}, #{a => 4, b => <<"bar">>}]},
         parthenon_decode:try_decode(?A_FOURTH_SCHEMA_NAME, <<"[{a=1, b=foo}, {a=4, b=bar}]">>)
+    ).
+
+can_handle_struct_ending_with_array_with_nested_struct(_Config) ->
+    ?assertEqual(
+        {ok, #{a => 123, b => [#{c => 456, d => <<"Some test, some test">>}]}},
+        parthenon_decode:try_decode(
+            ?A_FIFTH_SCHEMA_NAME, <<"{a=123, b=[{c=456, d=Some test, some test}]}">>
+        )
     ).
 
 %%%===================================================================

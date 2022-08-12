@@ -34,13 +34,31 @@ Inside ``.app.src``:
 Inside the code:
 
 ```erl
-parthenon:add_schema(athena_structure, <<"struct<a: int, b: int>">>).
-parthenon:decode(athena_structure, <<"{a=123, b=456}">>).
+ok = parthenon:add_schema(athena_structure, <<"struct<a: int, b: int>">>).
+{ok, #{a := 123, b := 456}} = parthenon:decode(athena_structure, <<"{a=123, b=456}">>, [
+    {object_format, maps}, {key_format, existing_atom}
+]).
+```
 
-{ok, Binary} = file:read_file("/path/to/athena-structure-schema").
-parthenon:add_schema(athena_structure, Binary).
-{ok, RawStructure} = file:read_file("/path/to/raw-athena-structure").
-parthenon:decode(athena_structure, RawStructure).
+To test it out from the shell, it is possible to simply do:
+
+```erl
+application:ensure_all_started(parthenon).
+ok = parthenon:add_schema(athena_structure, <<"struct<a: int, b: int>">>).
+{ok, #{a := 123, b := 456} = Response} = parthenon:decode(athena_structure, <<"{a=123, b=456}">>, [
+    {object_format, maps}, {key_format, existing_atom}
+]).
+
+ok = parthenon:add_schema(nested_structures, <<"struct<a: int, b: array<struct<c: int, d: string>>>">>).
+{ok, #{a := 123, b := [#{c := 456, d := <<"Some test, some test">>}]} = Response2} = parthenon:decode(
+    nested_structures, <<"{a=123, b=[{c=456, d=Some test, some test}]}">>, [
+        {object_format, maps}, {key_format, existing_atom}
+    ]
+).
+
+%% If `jiffy' is present
+<<"{\"b\":456,\"a\":123}">> = jiffy:encode(Response).
+<<"{\"b\":[{\"d\":\"Some test, some test\",\"c\":456}],\"a\":123}">> = jiffy:encode(Response2).
 ```
 
 ## Development
