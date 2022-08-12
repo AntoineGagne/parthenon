@@ -140,7 +140,7 @@ object_value(<<${, Rest/binary>>, Key, _, <<>>, Object, Nexts, Schema, Options) 
     Current = {object_key, make_object(Options), Encoder, Options},
     Next = {object, Key, Object, Schema, Options},
     whitespace(Rest, Current, [Next | Nexts]);
-object_value(<<$}, Rest/binary>>, Key, undefined, Buffer, Object, Nexts, Schema, Options) ->
+object_value(<<$}, Rest/binary>>, Key, _, Buffer, Object, Nexts, Schema, Options) ->
     Encoder = wrap_encoder(maps:get(Key, Schema, fun identity/1)),
     NewObject = update_object(Key, Encoder(Buffer), Object, Options),
     next(Rest, NewObject, Nexts);
