@@ -27,15 +27,25 @@ list -> 'array' '<' encoder '>' : create_encoder({list, '$3'}).
 
 Erlang code.
 
+-compile(
+    {inline, [
+        lightweight_trim/1,
+        do_lightweight_trim/2
+    ]}
+).
+
 mapping(Identifier, Encoder) ->
     {extract_identifier(Identifier), Encoder}.
 
 extract_identifier({word, _Line, Name}) ->
     Name.
 
+create_encoder({encoding, _Line, string}) ->
+    Encoder = to_encoder(string),
+    with_null_as_undefined(with_trim(Encoder));
 create_encoder({encoding, _Line, Encoding}) ->
     Encoder = to_encoder(Encoding),
-    with_null_as_undefined(with_trimmed_spaces(Encoder));
+    with_null_as_undefined(with_lightweight_trim(Encoder));
 create_encoder({list, Encoder}) when is_map(Encoder) ->
     {map_array, Encoder};
 create_encoder({list, Encoder}) ->
@@ -49,10 +59,31 @@ with_null_as_undefined(F) ->
         (Other) -> F(Other)
     end.
 
-with_trimmed_spaces(F) ->
+with_trim(F) ->
     fun(Binary) ->
-        F(string:trim(Binary, both))
+        F(parthenon_utils:trim(Binary))
     end.
+
+with_lightweight_trim(F) ->
+    fun(Binary) ->
+        F(lightweight_trim(Binary))
+    end.
+
+lightweight_trim(Binary) ->
+    do_lightweight_trim(Binary, <<>>).
+
+do_lightweight_trim(<<$\n, Rest/binary>>, Buffer) ->
+    do_lightweight_trim(Rest, Buffer);
+do_lightweight_trim(<<$\t, Rest/binary>>, Buffer) ->
+    do_lightweight_trim(Rest, Buffer);
+do_lightweight_trim(<<$\s, Rest/binary>>, Buffer) ->
+    do_lightweight_trim(Rest, Buffer);
+do_lightweight_trim(<<$\r, Rest/binary>>, Buffer) ->
+    do_lightweight_trim(Rest, Buffer);
+do_lightweight_trim(<<Character, Rest/binary>>, Buffer) ->
+    do_lightweight_trim(Rest, <<Buffer/binary, Character>>);
+do_lightweight_trim(<<>>, Buffer) ->
+    Buffer.
 
 to_encoder(int) ->
     fun binary_to_integer/1;
