@@ -33,9 +33,12 @@ mapping(Identifier, Encoder) ->
 extract_identifier({word, _Line, Name}) ->
     Name.
 
+create_encoder({encoding, _Line, string}) ->
+    Encoder = to_encoder(string),
+    with_null_as_undefined(with_trim(Encoder));
 create_encoder({encoding, _Line, Encoding}) ->
     Encoder = to_encoder(Encoding),
-    with_null_as_undefined(with_trimmed_spaces(Encoder));
+    with_null_as_undefined(with_lightweight_trim(Encoder));
 create_encoder({list, Encoder}) when is_map(Encoder) ->
     {map_array, Encoder};
 create_encoder({list, Encoder}) ->
@@ -49,9 +52,14 @@ with_null_as_undefined(F) ->
         (Other) -> F(Other)
     end.
 
-with_trimmed_spaces(F) ->
+with_trim(F) ->
     fun(Binary) ->
-        F(string:trim(Binary, both))
+        F(parthenon_utils:trim(Binary))
+    end.
+
+with_lightweight_trim(F) ->
+    fun(Binary) ->
+        F(parthenon_utils:lightweight_trim(Binary))
     end.
 
 to_encoder(int) ->
