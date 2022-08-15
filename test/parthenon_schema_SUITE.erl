@@ -1,10 +1,14 @@
 -module(parthenon_schema_SUITE).
 
+-include("parthenon.hrl").
+
 -include_lib("common_test/include/ct.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
 -compile(nowarn_export_all).
 -compile(export_all).
+
+-define(SOME_OPTIONS, #schema_options{}).
 
 all() ->
     [{group, all}].
@@ -135,8 +139,8 @@ return_undefined_on_null_values(_Config) ->
 
 apply_encoder(Field, Value, Schema) ->
     Encoder = maps:get(Field, Schema),
-    Encoder(Value).
+    Encoder(Value, ?SOME_OPTIONS).
 
 apply_list_encoder(Field, Value, Schema) ->
     Encoder = maps:get(Field, Schema),
-    [Encoder(V) || V <- Value].
+    [Encoder(V, ?SOME_OPTIONS) || V <- Value].

@@ -1,5 +1,7 @@
 -module(parthenon_decode).
 
+-include("parthenon.hrl").
+
 %% API
 -export([
     try_decode/2,
@@ -8,7 +10,8 @@
 
 -record(decode_options, {
     key_format = existing_atom :: key_format(),
-    object_format = maps :: object_format()
+    object_format = maps :: object_format(),
+    schema_options = #schema_options{} :: schema_options()
 }).
 
 -type schema() :: parthenon_schema:schema().
@@ -16,7 +19,8 @@
 -type decode_options() :: #decode_options{}.
 -type option() ::
     {object_format, object_format()}
-    | {key_format, key_format()}.
+    | {key_format, key_format()}
+    | {schema_options, [{null_as, atom() | binary()}]}.
 -type object_format() :: maps | proplists | tuple.
 -type key_format() :: existing_atom | atom | binary.
 
@@ -123,15 +127,16 @@ object_key(<<Character, Rest/binary>>, Buffer, Object, Nexts, Schema, Options) -
 object_value(<<$=, Rest/binary>>, Key, undefined, Buffer, Object, Nexts, Schema, Options) ->
     object_value(Rest, Key, undefined, <<Buffer/binary, $=>>, Object, Nexts, Schema, Options);
 object_value(<<$=, Rest/binary>>, Key, LastComma, Buffer, Object, Nexts, Schema, Options) ->
-    Encoder = wrap_encoder(maps:get(Key, Schema, fun identity/1)),
+    Encoder = wrap_encoder(maps:get(Key, Schema, fun identity/2)),
     Value = binary:part(Buffer, 0, LastComma - 1),
     NewKey = parthenon_utils:lightweight_trim(
         binary:part(Buffer, LastComma, byte_size(Buffer) - LastComma)
     ),
-    NewObject = update_object(Key, Encoder(Value), Object, Options),
+    EncodedValue = Encoder(Value, Options#decode_options.schema_options),
+    NewObject = update_object(Key, EncodedValue, Object, Options),
     whitespace(Rest, {object_value, NewKey, NewObject, Schema, Options}, Nexts);
 object_value(<<$[, Rest/binary>>, Key, _, <<>>, Object, Nexts, Schema, Options) ->
-    Encoder = maps:get(Key, Schema, fun identity/1),
+    Encoder = maps:get(Key, Schema, fun identity/2),
     Current = {list, [], Encoder, Options},
     Next = {object, Key, Object, Schema, Options},
     whitespace(Rest, Current, [Next | Nexts]);
@@ -141,8 +146,9 @@ object_value(<<${, Rest/binary>>, Key, _, <<>>, Object, Nexts, Schema, Options) 
     Next = {object, Key, Object, Schema, Options},
     whitespace(Rest, Current, [Next | Nexts]);
 object_value(<<$}, Rest/binary>>, Key, _, Buffer, Object, Nexts, Schema, Options) ->
-    Encoder = wrap_encoder(maps:get(Key, Schema, fun identity/1)),
-    NewObject = update_object(Key, Encoder(Buffer), Object, Options),
+    Encoder = wrap_encoder(maps:get(Key, Schema, fun identity/2)),
+    Encoded = Encoder(Buffer, Options#decode_options.schema_options),
+    NewObject = update_object(Key, Encoded, Object, Options),
     next(Rest, NewObject, Nexts);
 object_value(<<$,, Rest/binary>>, Key, _, Buffer, Object, Nexts, Schema, Options) ->
     CurrentPosition = byte_size(Buffer) + 1,
@@ -156,8 +162,9 @@ object_value(<<Character, Rest/binary>>, Key, LastComma, Buffer, Object, Nexts, 
     value().
 list(<<$], Rest/binary>>, List, _Buffer, Nexts, {map_array, _}, _Options) ->
     next(Rest, lists:reverse(List), Nexts);
-list(<<$], Rest/binary>>, List, Buffer, Nexts, Encoder, _Options) ->
-    NewList = lists:reverse([Encoder(Buffer) | List]),
+list(<<$], Rest/binary>>, List, Buffer, Nexts, Encoder, Options) ->
+    Encoded = Encoder(Buffer, Options#decode_options.schema_options),
+    NewList = lists:reverse([Encoded | List]),
     next(Rest, NewList, Nexts);
 list(<<${, Rest/binary>>, List, _Buffer, Nexts, {map_array, Encoder}, Options) ->
     Next = {list, List, {map_array, Encoder}, Options},
@@ -166,7 +173,8 @@ list(<<$,, Rest/binary>>, List, _Buffer, Nexts, Encoder = {map_array, _}, Option
     Next = {list, List, Encoder, Options},
     whitespace(Rest, Next, Nexts);
 list(<<$,, Rest/binary>>, List, Buffer, Nexts, Encoder, Options) ->
-    Next = {list, [Encoder(Buffer) | List], Encoder, Options},
+    Encoded = Encoder(Buffer, Options#decode_options.schema_options),
+    Next = {list, [Encoded | List], Encoder, Options},
     whitespace(Rest, Next, Nexts);
 list(<<Character, Rest/binary>>, List, Buffer, Nexts, Encoder, Options) ->
     list(Rest, List, <<Buffer/binary, Character>>, Nexts, Encoder, Options).
@@ -203,10 +211,10 @@ whitespace(<<Binary/binary>>, Next, Nexts) ->
 
 wrap_encoder(Fun) ->
     fun
-        (<<"null">>) ->
-            undefined;
-        (Value) ->
-            Fun(Value)
+        (<<"null">>, #schema_options{null_as = NullAlias}) ->
+            NullAlias;
+        (Value, Options) ->
+            Fun(Value, Options)
     end.
 
 -spec make_object(decode_options()) -> object().
@@ -246,8 +254,8 @@ try_binary_to_existing_atom(Binary) ->
             Binary
     end.
 
--spec identity(X) -> X.
-identity(X) ->
+-spec identity(X, term()) -> X.
+identity(X, _) ->
     X.
 
 -spec options([option()]) -> decode_options().
@@ -259,7 +267,16 @@ options(RawOptions) ->
 do_options({object_format, Format}, Options) ->
     Options#decode_options{object_format = object_format(Format)};
 do_options({key_format, Format}, Options) ->
-    Options#decode_options{key_format = key_format(Format)}.
+    Options#decode_options{key_format = key_format(Format)};
+do_options({schema_options, SubOptions}, Options) ->
+    Defaults = #schema_options{},
+    Options#decode_options{
+        schema_options = lists:foldl(fun schema_options/2, Defaults, SubOptions)
+    }.
+
+-spec schema_options({null_as, atom() | binary()}, schema_options()) -> schema_options().
+schema_options({null_as, NullAlias}, SchemaOptions) ->
+    SchemaOptions#schema_options{null_as = NullAlias}.
 
 -spec object_format(object_format() | term()) -> object_format().
 object_format(Format = maps) ->

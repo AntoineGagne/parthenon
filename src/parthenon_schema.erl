@@ -1,5 +1,7 @@
 -module(parthenon_schema).
 
+-include("parthenon.hrl").
+
 %% API
 -export([create/1]).
 
@@ -7,7 +9,7 @@
 -type schema_object() :: #{schema_key() := schema_value()}.
 -type schema_key() :: atom().
 -type schema_value() :: encoder() | schema_object() | {map_array, schema()}.
--type encoder() :: fun((binary()) -> supported_types()).
+-type encoder() :: fun((binary(), schema_options()) -> supported_types()).
 -type supported_types() ::
     undefined | integer() | float() | binary() | boolean() | [supported_types()].
 
