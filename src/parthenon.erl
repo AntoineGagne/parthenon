@@ -53,6 +53,12 @@ decode(SchemaName, Binary) ->
 %%       already exists or return them into binary if they do not</li>
 %%     </ul>
 %%  </li>
+%%   <li>`schema_options': Specify options to be passed to the schema.
+%%     <ul>
+%%       <li>`null_as': Specify what value to use for `null' values. Accept
+%%       `atom()' or `binary()'</li>
+%%     </ul>
+%%  </li>
 %% </ul>
 %%
 %% Example usage:
