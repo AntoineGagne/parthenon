@@ -56,7 +56,8 @@ groups() ->
             can_convert_keys_to_binary,
             can_decode_top_level_list,
             can_decode_top_level_struct_list,
-            can_handle_struct_ending_with_array_with_nested_struct
+            can_handle_struct_ending_with_array_with_nested_struct,
+            can_specify_different_null_values
         ]}
     ].
 
@@ -220,6 +221,16 @@ can_handle_struct_ending_with_array_with_nested_struct(_Config) ->
         {ok, #{a => 123, b => [#{c => 456, d => <<"Some test, some test">>}]}},
         parthenon_decode:try_decode(
             ?A_FIFTH_SCHEMA_NAME, <<"{a=123, b=[{c=456, d=Some test, some test}]}">>
+        )
+    ).
+
+can_specify_different_null_values(_Config) ->
+    ?assertEqual(
+        {ok, #{a => null, b => [#{c => null, d => null}]}},
+        parthenon_decode:try_decode(
+            ?A_FIFTH_SCHEMA_NAME, <<"{a=null, b=[{c=null, d=null}]}">>, [
+                {schema_options, [{null_as, null}]}
+            ]
         )
     ).
 

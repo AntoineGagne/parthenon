@@ -27,6 +27,8 @@ list -> 'array' '<' encoder '>' : create_encoder({list, '$3'}).
 
 Erlang code.
 
+-include("parthenon.hrl").
+
 mapping(Identifier, Encoder) ->
     {extract_identifier(Identifier), Encoder}.
 
@@ -48,38 +50,38 @@ create_encoder(Unknown) ->
 
 with_null_as_undefined(F) ->
     fun
-        (<<"null">>) -> undefined;
-        (Other) -> F(Other)
+        (<<"null">>, #schema_options{null_as = NullAlias}) -> NullAlias;
+        (Other, Options) -> F(Other, Options)
     end.
 
 with_trim(F) ->
-    fun(Binary) ->
-        F(parthenon_utils:trim(Binary))
+    fun(Binary, Options) ->
+        F(parthenon_utils:trim(Binary), Options)
     end.
 
 with_lightweight_trim(F) ->
-    fun(Binary) ->
-        F(parthenon_utils:lightweight_trim(Binary))
+    fun(Binary, Options) ->
+        F(parthenon_utils:lightweight_trim(Binary), Options)
     end.
 
 to_encoder(int) ->
-    fun binary_to_integer/1;
+    fun(Value, _Options) -> binary_to_integer(Value) end;
 to_encoder(bigint) ->
-    fun binary_to_integer/1;
+    fun(Value, _Options) -> binary_to_integer(Value) end;
 to_encoder(double) ->
-    fun binary_to_float/1;
+    fun(Value, _Options) -> binary_to_float(Value) end;
 to_encoder(boolean) ->
-    fun binary_to_boolean/1;
+    fun binary_to_boolean/2;
 to_encoder(string) ->
-    fun identity/1;
+    fun(Value, _Options) -> identity(Value) end;
 to_encoder(Unknown) ->
     throw({unknown_encoding, Unknown}).
 
-binary_to_boolean(<<"true">>) ->
+binary_to_boolean(<<"true">>, _Options) ->
     true;
-binary_to_boolean(<<"false">>) ->
+binary_to_boolean(<<"false">>, _Options) ->
     false;
-binary_to_boolean(Invalid) ->
+binary_to_boolean(Invalid, _Options) ->
     throw({conversion, {boolean, Invalid}}).
 
 identity(X) ->
