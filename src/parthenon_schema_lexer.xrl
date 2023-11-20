@@ -24,15 +24,23 @@ word_type("struct") ->
     reserved;
 word_type("array") ->
     reserved;
+word_type("tinyint") ->
+    encoding;
+word_type("smallint") ->
+    encoding;
 word_type("int") ->
     encoding;
-word_type("string") ->
+word_type("integer") ->
     encoding;
 word_type("bigint") ->
+    encoding;
+word_type("float") ->
     encoding;
 word_type("double") ->
     encoding;
 word_type("boolean") ->
+    encoding;
+word_type("string") ->
     encoding;
 word_type(_) ->
     unreserved.

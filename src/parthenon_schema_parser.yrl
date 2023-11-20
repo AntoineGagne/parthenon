@@ -63,11 +63,18 @@ with_lightweight_trim(F) ->
     fun(Binary, Options) ->
         F(parthenon_utils:lightweight_trim(Binary), Options)
     end.
-
+to_encoder(tinyint) ->
+    fun(Value, _Options) -> binary_to_integer(Value) end;
+to_encoder(smallint) ->
+    fun(Value, _Options) -> binary_to_integer(Value) end;
 to_encoder(int) ->
+    fun(Value, _Options) -> binary_to_integer(Value) end;
+to_encoder(integer) ->
     fun(Value, _Options) -> binary_to_integer(Value) end;
 to_encoder(bigint) ->
     fun(Value, _Options) -> binary_to_integer(Value) end;
+to_encoder(float) ->
+    fun(Value, _Options) -> binary_to_float(Value) end;
 to_encoder(double) ->
     fun(Value, _Options) -> binary_to_float(Value) end;
 to_encoder(boolean) ->
