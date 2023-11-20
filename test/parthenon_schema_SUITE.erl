@@ -88,22 +88,24 @@ return_error_on_invalid_encoding(_Config) ->
 contain_correct_encoder(_Config) ->
     {ok, Schema} = parthenon_schema:create(
         <<
-            "struct<boolean_: boolean, integer: int, double_: double, big_integer: bigint, string_: string,"
-            "tiny_integer: tinyint, small_integer: smallint, integer_: integer, float_: float"
-            "integer_list: array<int>, boolean_list: array<boolean>, double_list: array<double>,"
-            "big_integer_list: array<bigint>,string_list: array<string>, tiny_integer_list: array<tinyint>,"
-            "small_integer_list: array<smallint>, float_list: array<float>>"
+            "struct<boolean_: boolean, int_: int, integer_: integer, double_: double, big_integer: bigint, "
+            "string_: string, tiny_integer: tinyint, small_integer: smallint, integer_: integer, float_: float,"
+            "int_list: array<integer>, integer_list: array<integer>, boolean_list: array<boolean>, "
+            "double_list: array<double>, big_integer_list: array<bigint>,string_list: array<string>, "
+            "tiny_integer_list: array<tinyint>, small_integer_list: array<smallint>, float_list: array<float>>"
         >>
     ),
 
-    ?assertEqual(1, apply_encoder(<<"integer">>, <<"1">>, Schema)),
+    ?assertEqual(1, apply_encoder(<<"int_">>, <<"1">>, Schema)),
+    ?assertEqual(1, apply_encoder(<<"integer_">>, <<"1">>, Schema)),
     ?assertEqual(1, apply_encoder(<<"tiny_integer">>, <<"1">>, Schema)),
     ?assertEqual(1, apply_encoder(<<"small_integer">>, <<"1">>, Schema)),
     ?assertEqual(true, apply_encoder(<<"boolean_">>, <<"true">>, Schema)),
     ?assertEqual(1.0, apply_encoder(<<"double_">>, <<"1.0">>, Schema)),
-    ?assertEqual(1.0, apply_encoder(<<"float">>, <<"1.0">>, Schema)),
+    ?assertEqual(1.0, apply_encoder(<<"float_">>, <<"1.0">>, Schema)),
     ?assertEqual(100, apply_encoder(<<"big_integer">>, <<"100">>, Schema)),
     ?assertEqual(<<"test">>, apply_encoder(<<"string_">>, <<"test">>, Schema)),
+    ?assertEqual([2], apply_list_encoder(<<"int_list">>, [<<"2">>], Schema)),
     ?assertEqual([2], apply_list_encoder(<<"integer_list">>, [<<"2">>], Schema)),
     ?assertEqual([2], apply_list_encoder(<<"tiny_integer_list">>, [<<"2">>], Schema)),
     ?assertEqual([2], apply_list_encoder(<<"small_integer_list">>, [<<"2">>], Schema)),
@@ -121,22 +123,32 @@ can_parse_complex_schema(Config) ->
 return_undefined_on_null_values(_Config) ->
     {ok, Schema} = parthenon_schema:create(
         <<
-            "struct<boolean_: boolean, integer: int, double_: double, big_integer: bigint, string_: string,"
-            "integer_list: array<int>, boolean_list: array<boolean>, double_list: array<double>, big_integer_list: array<bigint>,"
-            "string_list: array<string>>"
+            "struct<boolean_: boolean, int_: int, integer_: integer, double_: double, big_integer: bigint, "
+            "tiny_integer: tinyint, small_integer: smallint, float_: float, integer_list: array<integer>, "
+            "tiny_integer_list: array<tinyint>, small_integer_list: array<smallint>, string_: string, "
+            "int_list: array<int>, boolean_list: array<boolean>, double_list: array<double>, "
+            "big_integer_list: array<bigint>, string_list: array<string>, float_list: array<float>>"
         >>
     ),
 
-    ?assertEqual(undefined, apply_encoder(<<"integer">>, <<"null">>, Schema)),
+    ?assertEqual(undefined, apply_encoder(<<"int_">>, <<"null">>, Schema)),
+    ?assertEqual(undefined, apply_encoder(<<"integer_">>, <<"null">>, Schema)),
     ?assertEqual(undefined, apply_encoder(<<"boolean_">>, <<"null">>, Schema)),
+    ?assertEqual(undefined, apply_encoder(<<"float_">>, <<"null">>, Schema)),
     ?assertEqual(undefined, apply_encoder(<<"double_">>, <<"null">>, Schema)),
+    ?assertEqual(undefined, apply_encoder(<<"small_integer">>, <<"null">>, Schema)),
+    ?assertEqual(undefined, apply_encoder(<<"tiny_integer">>, <<"null">>, Schema)),
     ?assertEqual(undefined, apply_encoder(<<"big_integer">>, <<"null">>, Schema)),
     ?assertEqual(undefined, apply_encoder(<<"string_">>, <<"null">>, Schema)),
+    ?assertEqual([undefined], apply_list_encoder(<<"int_list">>, [<<"null">>], Schema)),
     ?assertEqual([undefined], apply_list_encoder(<<"integer_list">>, [<<"null">>], Schema)),
+    ?assertEqual([undefined], apply_list_encoder(<<"tiny_integer_list">>, [<<"null">>], Schema)),
+    ?assertEqual([undefined], apply_list_encoder(<<"small_integer_list">>, [<<"null">>], Schema)),
     ?assertEqual(
         [undefined, undefined],
         apply_list_encoder(<<"boolean_list">>, [<<"null">>, <<"null">>], Schema)
     ),
+    ?assertEqual([undefined], apply_list_encoder(<<"float_list">>, [<<"null">>], Schema)),
     ?assertEqual([undefined], apply_list_encoder(<<"double_list">>, [<<"null">>], Schema)),
     ?assertEqual([undefined], apply_list_encoder(<<"big_integer_list">>, [<<"null">>], Schema)),
     ?assertEqual([undefined], apply_list_encoder(<<"string_list">>, [<<"null">>], Schema)).
