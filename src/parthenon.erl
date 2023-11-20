@@ -1,5 +1,5 @@
 %% @author Antoine Gagné <gagnantoine@gmail.com>
-%% @copyright 2022 Antoine Gagné
+%% @copyright 2023 Antoine Gagné
 %% @doc Parse Athena structures and schemas.
 -module(parthenon).
 

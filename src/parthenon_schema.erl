@@ -15,6 +15,7 @@
 
 -export_type([
     schema/0,
+    schema_object/0,
     schema_key/0,
     schema_value/0,
     encoder/0,
