@@ -7,19 +7,24 @@
 
 -type schema() :: schema_value().
 -type schema_object() :: #{schema_key() := schema_value()}.
--type schema_key() :: atom().
--type schema_value() :: encoder() | schema_object() | {map_array, schema()}.
+-type schema_key() :: binary().
+-type schema_map() :: {map, encoder(), schema()}.
+-type schema_value() ::
+    encoder() | schema_object() | {map_array, schema()} | schema_map().
 -type encoder() :: fun((binary(), schema_options()) -> supported_types()).
 -type supported_types() ::
-    undefined | integer() | float() | binary() | boolean() | [supported_types()].
+    undefined | primitive_types() | [supported_types()].
+-type primitive_types() :: integer() | float() | binary() | boolean().
 
 -export_type([
     schema/0,
     schema_object/0,
+    schema_map/0,
     schema_key/0,
     schema_value/0,
     encoder/0,
-    supported_types/0
+    supported_types/0,
+    primitive_types/0
 ]).
 
 %%%===================================================================

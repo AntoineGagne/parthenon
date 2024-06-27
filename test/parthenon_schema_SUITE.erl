@@ -90,9 +90,14 @@ contain_correct_encoder(_Config) ->
         <<
             "struct<boolean_: boolean, int_: int, integer_: integer, double_: double, big_integer: bigint, "
             "string_: string, tiny_integer: tinyint, small_integer: smallint, integer_: integer, float_: float,"
-            "int_list: array<integer>, integer_list: array<integer>, boolean_list: array<boolean>, "
+            "int_list: array<int>, integer_list: array<integer>, boolean_list: array<boolean>, "
             "double_list: array<double>, big_integer_list: array<bigint>,string_list: array<string>, "
-            "tiny_integer_list: array<tinyint>, small_integer_list: array<smallint>, float_list: array<float>>"
+            "tiny_integer_list: array<tinyint>, small_integer_list: array<smallint>, float_list: array<float>, "
+            "int_map: map<int, int>, integer_map: map<integer, integer>, boolean_map: map<boolean, boolean>, "
+            "double_map: map<double, double>, big_integer_map: map<bigint, bigint>,string_map: map<string, string>, "
+            "tiny_integer_map: map<tinyint, tinyint>, small_integer_map: map<smallint, smallint>, "
+            "float_map: map<float, float>, integer_list_map: map<boolean, array<int>>, "
+            "struct_map: map<integer, struct<foo: int>>>"
         >>
     ),
 
@@ -105,6 +110,7 @@ contain_correct_encoder(_Config) ->
     ?assertEqual(1.0, apply_encoder(<<"float_">>, <<"1.0">>, Schema)),
     ?assertEqual(100, apply_encoder(<<"big_integer">>, <<"100">>, Schema)),
     ?assertEqual(<<"test">>, apply_encoder(<<"string_">>, <<"test">>, Schema)),
+
     ?assertEqual([2], apply_list_encoder(<<"int_list">>, [<<"2">>], Schema)),
     ?assertEqual([2], apply_list_encoder(<<"integer_list">>, [<<"2">>], Schema)),
     ?assertEqual([2], apply_list_encoder(<<"tiny_integer_list">>, [<<"2">>], Schema)),
@@ -115,7 +121,43 @@ contain_correct_encoder(_Config) ->
     ?assertEqual([2.0], apply_list_encoder(<<"double_list">>, [<<"2.0">>], Schema)),
     ?assertEqual([2.0], apply_list_encoder(<<"float_list">>, [<<"2.0">>], Schema)),
     ?assertEqual([101], apply_list_encoder(<<"big_integer_list">>, [<<"101">>], Schema)),
-    ?assertEqual([<<"test_2">>], apply_list_encoder(<<"string_list">>, [<<"test_2">>], Schema)).
+    ?assertEqual([<<"test_2">>], apply_list_encoder(<<"string_list">>, [<<"test_2">>], Schema)),
+
+    ?assertEqual({1, 1}, apply_encoder(<<"int_map">>, {<<"1">>, <<"1">>}, Schema)),
+    ?assertEqual({1, 1}, apply_encoder(<<"integer_map">>, {<<"1">>, <<"1">>}, Schema)),
+    ?assertEqual({1, 1}, apply_encoder(<<"tiny_integer_map">>, {<<"1">>, <<"1">>}, Schema)),
+    ?assertEqual({1, 1}, apply_encoder(<<"small_integer_map">>, {<<"1">>, <<"1">>}, Schema)),
+    ?assertEqual(
+        {true, false}, apply_encoder(<<"boolean_map">>, {<<"true">>, <<"false">>}, Schema)
+    ),
+    ?assertEqual(
+        {2.0, 2.0}, apply_encoder(<<"double_map">>, {<<"2.0">>, <<"2.0">>}, Schema)
+    ),
+    ?assertEqual(
+        {101, 101}, apply_encoder(<<"big_integer_map">>, {<<"101">>, <<"101">>}, Schema)
+    ),
+    ?assertEqual(
+        {<<"test_key">>, <<"test_value">>},
+        apply_encoder(<<"string_map">>, {<<"test_key">>, <<"test_value">>}, Schema)
+    ),
+    ?assertEqual(
+        {2.0, 2.0},
+        apply_encoder(<<"float_map">>, {<<"2.0">>, <<"2.0">>}, Schema)
+    ),
+
+    {map, BooleanKeyEncoder, IntEncoder} = maps:get(<<"integer_list_map">>, Schema),
+    ?assertEqual(
+        {true, [2]},
+        {BooleanKeyEncoder(<<"true">>, ?SOME_OPTIONS), [
+            IntEncoder(V, ?SOME_OPTIONS)
+         || V <- [<<"2">>]
+        ]}
+    ),
+    {map, IntegerEncoder, StructEncoder} = maps:get(<<"struct_map">>, Schema),
+    ?assertEqual(
+        {1, 4},
+        {IntegerEncoder(<<"1">>, ?SOME_OPTIONS), apply_encoder(<<"foo">>, <<"4">>, StructEncoder)}
+    ).
 
 can_parse_complex_schema(Config) ->
     ?assertMatch({ok, _}, parthenon_schema:create(?config(raw_schema, Config))).
@@ -158,8 +200,13 @@ return_undefined_on_null_values(_Config) ->
 %%%===================================================================
 
 apply_encoder(Field, Value, Schema) ->
-    Encoder = maps:get(Field, Schema),
-    Encoder(Value, ?SOME_OPTIONS).
+    case maps:get(Field, Schema) of
+        {map, KeyEncoder, ValueEncoder} ->
+            {K, V} = Value,
+            {KeyEncoder(K, ?SOME_OPTIONS), ValueEncoder(V, ?SOME_OPTIONS)};
+        Encoder ->
+            Encoder(Value, ?SOME_OPTIONS)
+    end.
 
 apply_list_encoder(Field, Value, Schema) ->
     Encoder = maps:get(Field, Schema),
