@@ -14,12 +14,18 @@
 -define(A_THIRD_SCHEMA_NAME, schema_3).
 -define(A_FOURTH_SCHEMA_NAME, schema_4).
 -define(A_FIFTH_SCHEMA_NAME, schema_5).
+-define(A_SIXTH_SCHEMA_NAME, schema_6).
+-define(A_SEVENTH_SCHEMA_NAME, schema_7).
+-define(AN_EIGHT_SCHEMA_NAME, schema_8).
 -define(ANOTHER_SCHEMA,
     <<"struct<a: int, b: string, c: string, d: int>">>
 ).
 -define(A_THIRD_SCHEMA, <<"array<int>">>).
 -define(A_FOURTH_SCHEMA, <<"array<struct<a: int, b: string>>">>).
 -define(A_FIFTH_SCHEMA, <<"struct<a: int, b: array<struct<c: int, d: string>>>">>).
+-define(A_SIXTH_SCHEMA, <<"struct<a: map<boolean, struct<b: array<int>>>>">>).
+-define(A_SEVENTH_SCHEMA, <<"struct<a: map<int, boolean>, b: map<string, string>>">>).
+-define(AN_EIGHT_SCHEMA, <<"struct<a: array<map<int, boolean>>>">>).
 
 all() ->
     [
@@ -34,6 +40,10 @@ init_per_suite(Config) ->
     ok = parthenon_schema_server:add_schema(?A_THIRD_SCHEMA_NAME, ?A_THIRD_SCHEMA),
     ok = parthenon_schema_server:add_schema(?A_FOURTH_SCHEMA_NAME, ?A_FOURTH_SCHEMA),
     ok = parthenon_schema_server:add_schema(?A_FIFTH_SCHEMA_NAME, ?A_FIFTH_SCHEMA),
+    ok = parthenon_schema_server:add_schema(?A_FIFTH_SCHEMA_NAME, ?A_FIFTH_SCHEMA),
+    ok = parthenon_schema_server:add_schema(?A_SIXTH_SCHEMA_NAME, ?A_SIXTH_SCHEMA),
+    ok = parthenon_schema_server:add_schema(?A_SEVENTH_SCHEMA_NAME, ?A_SEVENTH_SCHEMA),
+    ok = parthenon_schema_server:add_schema(?AN_EIGHT_SCHEMA_NAME, ?AN_EIGHT_SCHEMA),
     [{schema_server_pid, Pid} | Config].
 
 end_per_suite(Config) ->
@@ -57,7 +67,10 @@ groups() ->
             can_decode_top_level_list,
             can_decode_top_level_struct_list,
             can_handle_struct_ending_with_array_with_nested_struct,
-            can_specify_different_null_values
+            can_specify_different_null_values,
+            can_decode_map,
+            can_decode_struct_with_map_from_boolean_to_struct_with_list,
+            can_decode_list_containing_maps
         ]}
     ].
 
@@ -229,6 +242,45 @@ can_specify_different_null_values(_Config) ->
         {ok, #{a => null, b => [#{c => null, d => null}]}},
         parthenon_decode:try_decode(
             ?A_FIFTH_SCHEMA_NAME, <<"{a=null, b=[{c=null, d=null}]}">>, [
+                {schema_options, [{null_as, null}]}
+            ]
+        )
+    ).
+
+can_decode_map(_Config) ->
+    ?assertEqual(
+        {ok, #{
+            a => #{1 => true, 2 => false, 3 => null},
+            b => #{
+                <<"test_42">> => <<"bar">>,
+                <<"application/json">> => <<"test=1">>,
+                <<"test_43">> => null
+            }
+        }},
+        parthenon_decode:try_decode(
+            ?A_SEVENTH_SCHEMA_NAME,
+            <<"{a={1=true, 2=false, 3=null}, b={test_42=bar, application/json=test=1, test_43=null}}">>,
+            [
+                {schema_options, [{null_as, null}]}
+            ]
+        )
+    ).
+
+can_decode_struct_with_map_from_boolean_to_struct_with_list(_Config) ->
+    ?assertEqual(
+        {ok, #{a => #{true => #{b => [1, null, 2]}, false => #{b => [3, 4, 5]}}}},
+        parthenon_decode:try_decode(
+            ?A_SIXTH_SCHEMA_NAME, <<"{a={true={b=[1, null, 2]}, false={b=[3, 4, 5]}}}">>, [
+                {schema_options, [{null_as, null}]}
+            ]
+        )
+    ).
+
+can_decode_list_containing_maps(_Config) ->
+    ?assertEqual(
+        {ok, #{a => [#{1 => true, 2 => false}, #{3 => null, 4 => false}]}},
+        parthenon_decode:try_decode(
+            ?AN_EIGHT_SCHEMA_NAME, <<"{a=[{1=true, 2=false}, {3=null, 4=false}]}">>, [
                 {schema_options, [{null_as, null}]}
             ]
         )

@@ -24,6 +24,8 @@ word_type("struct") ->
     reserved;
 word_type("array") ->
     reserved;
+word_type("map") ->
+    reserved;
 word_type("tinyint") ->
     encoding;
 word_type("smallint") ->

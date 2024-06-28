@@ -1,6 +1,6 @@
-Nonterminals schema struct_root struct_list struct_list_elements struct_element list encoder.
+Nonterminals schema struct_root struct_list struct_list_elements struct_element map_root list encoder.
 
-Terminals '<' '>' ',' ':' 'struct' 'array' word encoding.
+Terminals '<' '>' ',' ':' 'struct' 'array' 'map' word encoding.
 
 Rootsymbol schema.
 
@@ -23,7 +23,11 @@ encoder -> list : '$1'.
 
 encoder -> struct_root : '$1'.
 
+encoder -> map_root : '$1'.
+
 list -> 'array' '<' encoder '>' : create_encoder({list, '$3'}).
+
+map_root -> 'map' '<' encoding ',' encoder '>' : create_encoder({map, '$3', '$5'}).
 
 Erlang code.
 
@@ -43,8 +47,17 @@ create_encoder({encoding, _Line, Encoding}) ->
     with_null_as_undefined(with_lightweight_trim(Encoder));
 create_encoder({list, Encoder}) when is_map(Encoder) ->
     {map_array, Encoder};
+create_encoder({list, Encoder = {map, _, _}}) ->
+    Encoder;
 create_encoder({list, Encoder}) ->
     with_null_as_undefined(Encoder);
+create_encoder({map, {encoding, _, KeyEncoding}, {encoding, _, ValueEncoding}})
+  when is_map(ValueEncoding) ->
+    KeyEncoder = to_encoder(KeyEncoding),
+    {map, KeyEncoder, ValueEncoding};
+create_encoder({map, {encoding, _, KeyEncoding}, ValueEncoder}) ->
+    KeyEncoder = to_encoder(KeyEncoding),
+    {map, KeyEncoder, ValueEncoder};
 create_encoder(Unknown) ->
     throw({unknown_encoding, Unknown}).
 
@@ -63,6 +76,7 @@ with_lightweight_trim(F) ->
     fun(Binary, Options) ->
         F(parthenon_utils:lightweight_trim(Binary), Options)
     end.
+
 to_encoder(tinyint) ->
     fun(Value, _Options) -> binary_to_integer(Value) end;
 to_encoder(smallint) ->
