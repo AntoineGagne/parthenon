@@ -166,6 +166,9 @@ list(<<$], Rest/binary>>, List, _Buffer, Nexts, {map, _, _}, _Options) ->
     next(Rest, lists:reverse(List), Nexts);
 list(<<$], Rest/binary>>, List, _Buffer, Nexts, {map_array, _}, _Options) ->
     next(Rest, lists:reverse(List), Nexts);
+list(<<$], Rest/binary>>, List, <<>>, Nexts, _Encoder, _Options) ->
+    NewList = lists:reverse(List),
+    next(Rest, NewList, Nexts);
 list(<<$], Rest/binary>>, List, Buffer, Nexts, Encoder, Options) ->
     Encoded = Encoder(Buffer, Options#decode_options.schema_options),
     NewList = lists:reverse([Encoded | List]),
@@ -176,10 +179,16 @@ list(<<${, Rest/binary>>, List, _Buffer, Nexts, Encoder = {map, _, _}, Options) 
 list(<<${, Rest/binary>>, List, _Buffer, Nexts, {map_array, Encoder}, Options) ->
     Next = {list, List, {map_array, Encoder}, Options},
     object(Rest, make_object(Options), [Next | Nexts], Encoder, Options);
+list(<<$[, Rest/binary>>, List, _Buffer, Nexts, Encoder, Options) ->
+    Next = {list, List, Encoder, Options},
+    whitespace(Rest, {list, [], Encoder, Options}, [Next | Nexts]);
 list(<<$,, Rest/binary>>, List, _Buffer, Nexts, Encoder = {map, _, _}, Options) ->
     Next = {list, List, Encoder, Options},
     whitespace(Rest, Next, Nexts);
 list(<<$,, Rest/binary>>, List, _Buffer, Nexts, Encoder = {map_array, _}, Options) ->
+    Next = {list, List, Encoder, Options},
+    whitespace(Rest, Next, Nexts);
+list(<<$,, Rest/binary>>, List, <<>>, Nexts, Encoder, Options) ->
     Next = {list, List, Encoder, Options},
     whitespace(Rest, Next, Nexts);
 list(<<$,, Rest/binary>>, List, Buffer, Nexts, Encoder, Options) ->
