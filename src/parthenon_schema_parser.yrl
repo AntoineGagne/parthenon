@@ -49,6 +49,8 @@ create_encoder({list, Encoder}) when is_map(Encoder) ->
     {map_array, Encoder};
 create_encoder({list, Encoder = {map, _, _}}) ->
     Encoder;
+create_encoder({list, {list, _} = Encoder}) ->
+    create_encoder(Encoder);
 create_encoder({list, Encoder}) ->
     with_null_as_undefined(Encoder);
 create_encoder({map, {encoding, _, KeyEncoding}, {encoding, _, ValueEncoding}})
